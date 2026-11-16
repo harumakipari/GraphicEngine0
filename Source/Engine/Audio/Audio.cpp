@@ -165,8 +165,6 @@ void CoreAudio::Initialize()
 	hr = xaudio2->CreateSubmixVoice(&submixVoices[SE], 2, 44100);
 	_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
-	// X3DAudio ÇÃèâä˙âª
-	//C3DAudio::Initialize();
 }
 
 CoreAudio::~CoreAudio()
@@ -220,7 +218,6 @@ std::shared_ptr<CoreAudio::CoreAudioBuffer> CoreAudio::CoreAudioBuffer::GetResou
     if (FAILED(hr))
         return nullptr;
 
-    // Keep PCM data locally until the complete read succeeds.
     hr = FindChunk_(file.Get(), 'atad'/*DATA*/, chunkSize, chunkPosition);
     if (FAILED(hr) || chunkSize == 0)
         return nullptr;
@@ -230,9 +227,9 @@ std::shared_ptr<CoreAudio::CoreAudioBuffer> CoreAudio::CoreAudioBuffer::GetResou
     if (FAILED(hr))
         return nullptr;
 
-    audioBuffer->buffer.AudioBytes = chunkSize;  //size of the audio buffer in bytes
-    audioBuffer->buffer.pAudioData = data.release(); // CoreAudioBuffer owns this allocation.
-    audioBuffer->buffer.Flags = XAUDIO2_END_OF_STREAM; // tell the source voice not to expect any data after this buffer
+    audioBuffer->buffer.AudioBytes = chunkSize;  
+    audioBuffer->buffer.pAudioData = data.release(); 
+    audioBuffer->buffer.Flags = XAUDIO2_END_OF_STREAM; 
 
     resources[filePath] = audioBuffer;
     return audioBuffer;

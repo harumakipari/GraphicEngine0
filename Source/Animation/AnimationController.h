@@ -84,27 +84,11 @@ public:
 
     void AddAnimation(const std::string& animationName, const size_t animationClip);
 
-    bool IsPlayAnimation() const { return !(this->isAnimationFinished); }
-
-    void SetAnimationRate(const float animationRate) { this->animationRate = animationRate; }
-
-    void ResetAnimationRate() { this->animationRate = 1.0f; }
-
-    float GetCurrentAnimationTime() const { return animationTime; }
-
-    bool EvaluateWeaponVisualState(bool& outShowTrail, float& outEmissivePower, bool& outHasShowTrail, bool& outHasShowEmissive) const;
-
-    void ResetRootMotion(const std::string& animationName, const bool loop = false, const bool isBlend = true, const float blendTime = 0.3f);
-
     bool PlayAnimationImmediate(const std::string& animationName, bool loop = true, bool ignoreRootMotion = false);
-
-    void DrawImGui();
-
-    bool IsEditorPreviewActive() const { return editorPreviewActive; }
-    bool IsEditorPreviewPlaying() const { return editorPreviewPlaying; }
-    bool IsEditorPreviewHitBoxSweepVisible() const { return editorPreviewShowHitBoxSweep; }
-
-    float GetCurrentSampledAnimationTime() const { return editorPreviewActive ? editorPreviewTime : animationTime; }
+    void SetAnimationRate(const float animationRate) { this->animationRate = animationRate; }
+    void ResetAnimationRate() { this->animationRate = 1.0f; }
+    bool IsPlayAnimation() const { return !(this->isAnimationFinished); }
+    float GetCurrentAnimationTime() const { return animationTime; }
     const std::string& GetCurrentAnimationName()const { return currentAnimationName; }
 
     float GetAnimationLength(const std::string& animationName)
@@ -113,45 +97,46 @@ public:
         return target->model->animations[clip].duration;
     }
 
+    bool SetPlaybackRange(float startTime, float endTime);
+
+    void ResetRootMotion(const std::string& animationName, const bool loop = false, const bool isBlend = true, const float blendTime = 0.3f);
+    void SetEnableRootMotion(const bool enableRootMotion);
+    void SetIgnoreRootMotion(const bool ignoreRootMotion) { this->ignoreRootMotion = ignoreRootMotion; }
+
+    // Animation単位でRoot TranslationをPoseから除去する。
+    void SetRemoveRootTranslationFromPose(const std::string& animationName, bool remove);
+
     bool ConfigureLocalPoseOverride(const std::string& sourceAnimationName, float sourceTime, const std::vector<std::string>& boneNames);
-
     void SetLocalPoseOverrideWeight(float weight);
-
     void ClearLocalPoseOverride();
 
-    bool SetPlaybackRange(float startTime, float endTime);
     bool HoldAnimationPose(const std::string& animationName, float time);
     bool BlendToHeldAnimationPose(const std::string& animationName, float time, float blendTime);
     void ReleaseRuntimeHeldAnimationPose(bool preserveBlendSource = false);
     void ReleaseHeldAnimationPose(bool preserveBlendSource = false);
+
     bool LatchCurrentVisualPose();
     void ReleaseLatchedVisualPose();
     bool IsVisualPoseLatched() const { return visualPoseLatchActive; }
 
     const AnimationNotifyAsset* GetAnimationAsset(const std::string& animationName) const;
-
-    // Animation単位でRoot TranslationをPoseから除去する。
-    void SetRemoveRootTranslationFromPose(const std::string& animationName, bool remove);
-
-    void SetIgnoreRootMotion(const bool ignoreRootMotion) { this->ignoreRootMotion = ignoreRootMotion; }
-
-    void SetEnableRootMotion(const bool enableRootMotion);
-
+    bool EvaluateWeaponVisualState(bool& outShowTrail, float& outEmissivePower, bool& outHasShowTrail, bool& outHasShowEmissive) const;
     void SetOwnerName(const std::string& name) { ownerName = name; }
-
     void LoadAllNotifyAssets(const std::string& ownerName);
-
-    RuntimeDangerObbSaveResult SaveDangerObbForRuntimeTuning(size_t clip, size_t stateIndex, const AnimationNotifyState& state,std::string& outFilePath);
-
     AnimationNotifyAsset* GetNotifyAssetForRuntimeTuning(const size_t clip);
     const AnimationNotifyAsset* GetNotifyAssetForRuntimeTuning(const size_t clip) const;
+    RuntimeDangerObbSaveResult SaveDangerObbForRuntimeTuning(size_t clip, size_t stateIndex, const AnimationNotifyState& state,std::string& outFilePath);
 
     // 単一の360度Locomotion BlendSpaceへアニメーションを追加する
     void AddLocomotionBlendAnimation(const std::string& name, const float angle, const float phaseOffset = 0.0f);
-
     void SetBlendInput(const float x, const float y) { blendInput = { x, y }; }
-
     void SetUseBlendSpace(const bool use);
+
+    void DrawImGui();
+    bool IsEditorPreviewActive() const { return editorPreviewActive; }
+    bool IsEditorPreviewPlaying() const { return editorPreviewPlaying; }
+    bool IsEditorPreviewHitBoxSweepVisible() const { return editorPreviewShowHitBoxSweep; }
+    float GetCurrentSampledAnimationTime() const { return editorPreviewActive ? editorPreviewTime : animationTime; }
 
 private:
     // ブレンドスペースを更新する
@@ -161,27 +146,21 @@ private:
     float GetLocomotionDuration();
 
     void OnNotifyBegin(const AnimationNotifyState& state);
-
     void OnNotifyEnd(const AnimationNotifyState& state);
-
     void OnNotifyEvent(const AnimationNotifyEvent& event);
 
     // BlendSpaceから抽出したRoot Motionを取得して消費する
     bool ConsumeBlendSpaceRootMotion(DirectX::XMFLOAT3& outDelta);
-
     void ApplyLocalPoseOverride();
+    bool IsVisualPoseLatchValid() const;
+    const std::vector<InterleavedGltfModel::Node>& GetRuntimeVisualPoseNodes();
+    void ApplyRuntimeVisualPose();
 
     // NotifyAssetを保存する
     void SaveNotifyAsset(const std::string& filename, const AnimationNotifyAsset& asset);
 
     // NotifyAssetをロードする
     void LoadNotifyAsset(const std::string& filename, AnimationNotifyAsset& asset);
-
-    // イベントを追加する
-    void AddEvent(AnimationNotifyTrack& track, AnimationNotifyEvent::Type type, float time);
-
-    // ステートを追加する
-    void AddState(AnimationNotifyTrack& track, AnimationNotifyState::Type type, float startTime);
 
     void DrawTimeline();
 
@@ -200,24 +179,26 @@ private:
     // Notifyの詳細設定のImGui描画
     void DrawNotifyInspector(AnimationNotifyAsset& asset);
 
+    // イベントを追加する
+    void AddEvent(AnimationNotifyTrack& track, AnimationNotifyEvent::Type type, float time);
+
+    // ステートを追加する
+    void AddState(AnimationNotifyTrack& track, AnimationNotifyState::Type type, float startTime);
+
+    void BeginEditorPreview(bool playing, bool resetTime);
+    void SetEditorPreviewTime(float time);
     void UpdateEditorPreview(float deltaTime);
     void ApplyEditorPreviewPose();
     void DrawEditorPreviewStates();
     void ProcessEditorPreviewEvents(float previousTime, float currentTime, float duration, bool wrapped);
     void ProcessEditorPreviewStatesForward(float previousTime, float currentTime);
     void SyncEditorPreviewStates(float time);
-    void EndAllEditorPreviewStates();
-    bool IsEditorPreviewStateDispatchable(const AnimationNotifyState& state) const;
     void BeginEditorPreviewState(size_t stateIndex);
     void EndEditorPreviewState(size_t stateIndex);
-    void BeginEditorPreview(bool playing, bool resetTime);
-    void SetEditorPreviewTime(float time);
+    void EndAllEditorPreviewStates();
+    bool IsEditorPreviewStateDispatchable(const AnimationNotifyState& state) const;
     void CaptureEditorRuntimeSnapshot();
     void EndEditorPreview();
-    bool IsVisualPoseLatchValid() const;
-    const std::vector<InterleavedGltfModel::Node>& GetRuntimeVisualPoseNodes();
-    void ApplyRuntimeVisualPose();
-
 private:
     std::vector<SkeletalMeshComponent*> extraTargets;
     SkeletalMeshComponent* target = nullptr;
@@ -333,10 +314,8 @@ private:
 
     bool useBlendSpace = false;
     float locomotionTime = 0.0f;
-    float locomotionPlayRate = 1.0f;
     // ブレンドスペースに入る時の補完処理
     bool blendSpaceTransition = false;
-    float blendSpaceTransitionTime = 0.2f;
     float blendSpaceElapsed = 0.0f;
     // ブレンドスペースのルートモーション処理
     float previousLocomotionPhase = 0.0f;
@@ -361,9 +340,6 @@ private:
     bool pendingLocomotionPhaseTransfer = false;
     float pendingLocomotionPhase = 0.0f;
 
-    float locomotionBackwardSideMaxWeight = 0.15f;
-    float locomotionDebugBwdWeight = 0.5f;
-    float locomotionDebugEvaluationAngle = 0.0f;
     // ルートモーションの最初を記録する　Pose
     std::vector<InterleavedGltfModel::Node> normalRootMotionStartNodes;
     // ルートモーションの最後を記録する　Pose

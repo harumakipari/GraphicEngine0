@@ -37,7 +37,6 @@ public:
     bool IsUseCinematic() const { return useCinematicCamera; }
     bool IsUseMovie() const { return useMovieCamera; }
 
-    //void SetGameCamera(const std::weak_ptr<Camera>& camera) { gameCamera = camera; }
     void SetDebugCamera(const std::shared_ptr<Camera>& camera) { debugCamera = camera; }
 
     void SetCinematicCamera(const std::shared_ptr<Camera>& camera) { cinematicCamera = camera; }

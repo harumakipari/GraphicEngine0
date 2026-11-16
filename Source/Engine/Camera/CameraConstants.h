@@ -1,5 +1,4 @@
-#ifndef CAMERA_CONSTANTS_H
-#define CAMERA_CONSTANTS_H
+#pragma once
 
 #include <DirectXMath.h>
 
@@ -18,4 +17,3 @@ struct ViewConstants
 };
 
 
-#endif // !CAMERA_CONSTANTS_H

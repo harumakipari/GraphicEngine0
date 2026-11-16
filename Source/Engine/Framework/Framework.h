@@ -3,25 +3,23 @@
 #include <windows.h>
 #include <tchar.h>
 #include <sstream>
+#include <d3d11_1.h>
+#include <wrl.h>
+#include <dxgi1_6.h>
 
 #include "Engine/Utility/Time.h"
 
-
 #ifdef USE_IMGUI
 #define IMGUI_ENABLE_DOCKING
-#include "../External/imgui/imgui.h"
-#include "../External/imgui//imgui_internal.h"
-#include "../External/imgui//imgui_impl_dx11.h"
-#include "../External/imgui//imgui_impl_win32.h"
+#include <imgui.h>
+#include <imgui_internal.h>
+#include <imgui_impl_dx11.h>
+#include <imgui_impl_win32.h>
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 extern ImWchar glyphRangesJapanese[];
 #endif
 
 
-#include <d3d11_1.h>
-//COMオブジェクトをComPtrスマートポインターテンプレートを使った変数宣言に変更する
-#include <wrl.h>
-#include <dxgi1_6.h>
 
 #define ENABLE_DIRECT2D
 #ifdef ENABLE_DIRECT2D
@@ -125,12 +123,8 @@ public:
                 ImGui_ImplWin32_NewFrame();
                 ImGui::NewFrame();
 #endif
-
                 bool skipRendering = Update(tictoc.DeltaTime());
-
                 Render(tictoc.DeltaTime(), skipRendering);
-                //Render(tictoc.DeltaTime());
-
 #ifdef USE_IMGUI
                 {
                     ZoneScopedN("ImGui Render CPU");
@@ -153,8 +147,6 @@ public:
         ImGui_ImplWin32_Shutdown();
         ImGui::DestroyContext();
 #endif
-
-
         return Uninitialize() ? static_cast<int>(msg.wParam) : 0;
     }
 
@@ -223,16 +215,16 @@ public:
 
 private:
     bool Initialize();
-    bool Update(float elapsed_time/*Elapsed seconds from last frame*/);
-    void Render(float elapsed_time/*Elapsed seconds from last frame*/, bool renderable) const;
+    bool Update(float elapsedTime);
+    void Render(float elapsedTime, bool renderable) const;
     bool Uninitialize();
 private:
     Time tictoc;
     uint32_t frames{ 0 };
-    float elapsed_time{ 0.0f };
+    float elapsedTime{ 0.0f };
     void calculate_frame_stats()
     {
-        if (++frames, (tictoc.TimeStamp() - elapsed_time) >= 1.0f)
+        if (++frames, (tictoc.TimeStamp() - elapsedTime) >= 1.0f)
         {
             float fps = static_cast<float>(frames);
             std::wostringstream outs;
@@ -241,25 +233,16 @@ private:
             SetWindowTextW(hwnd, outs.str().c_str());
 
             frames = 0;
-            elapsed_time += 1.0f;
+            elapsedTime += 1.0f;
         }
     }
-
-
-    Microsoft::WRL::ComPtr<ID3D11PixelShader> pixelShaders[8];
-
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> shaderResourceViews[8];
-
 private:
     BOOL fullscreenMode{ FALSE };
     BOOL vsync{ FALSE };
     BOOL tearingSupported{ FALSE };
 
-
     RECT windowedRect;
     DWORD windowedStyle;
-
     std::unique_ptr<CoreComputeParticleSystem> particleSystem;
-
     std::shared_ptr<Sprite> back;
 };

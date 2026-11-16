@@ -102,7 +102,6 @@ bool Framework::Update(float deltaTime)
         }
     }
 
-
     // デバックコマンド更新
     DebugRender::Tick(deltaTime);
 
@@ -201,7 +200,7 @@ void Framework::Render(float deltaTime, bool skipRendering) const
         {
             ZoneScopedN("Scene Render");
             ProfileScopedSection_2(0, "Render", ImGuiControl::Profiler::Red);
-            Scene::_render(immediateContext, elapsed_time);//
+            Scene::_render(immediateContext, elapsedTime);//
         }
 #ifdef USE_IMGUI
         {
@@ -227,8 +226,6 @@ bool Framework::Uninitialize()
 
     CoreAudio::ClearAll();
 
-    //gameManager->UninitAll();
-    // SCENE_TRANSITION
     Scene::_uninitialize(device);
     Graphics::DestroyTracyD3D11Context();
     return true;

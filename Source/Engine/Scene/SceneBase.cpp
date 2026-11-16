@@ -7,7 +7,6 @@
 #include <DDSTextureLoader.h>
 
 #include "Engine/Debug/DebugRender.h"
-#include "Engine/Debug/EditorGizmo.h"
 #include "Engine/Debug/SceneEditor.h"
 #include "Engine/Effects/EffectEditor.h"
 #include "Engine/Effects/EffectManager.h"

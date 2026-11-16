@@ -5,9 +5,6 @@
 #include "Sampler.hlsli"
 
 
-
-
-#if 1
 #define BASECOLOR_TEXTURE 0 
 #define METALLIC_ROUGHNESS_TEXTURE 1 
 #define NORMAL_TEXTURE 2 
@@ -113,7 +110,6 @@ void main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         N = normalize((normalFactor.x * T) + (normalFactor.y * B) + (normalFactor.z * N));
     }
     
-#if 1
     // 点光源の処理
     float3 pointDiffuse = 0;
     float3 pointSpecular = 0;
@@ -132,7 +128,6 @@ void main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
             LP /= len;
             const float pNoV = max(0.0, dot(N, V));
             const float pNoL = max(0.0, dot(N, LP));
-            // float pNoL = max(0, 0.5 * dot(N, LP) + 0.5);
             if (pNoV > 0.0 || pNoL > 0.0)
             {
                 const float3 R = reflect(-LP, N);
@@ -174,13 +169,11 @@ void main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
             specular += Li * NoL * BrdfSpecularGgx(f0, f90, alphaRoughness, HoV, NoL, NoV, NoH);
         }
     }
-#endif
 
 
-#if 1   // 画像ベースの照明
+ // 画像ベースの照明
     float3 iblDiffuse = IblRadianceLambertian(N, V, roughnessFactor, cDiff, f0) * iblIntensity;
     float3 iblSpecular = IblRadianceGgx(N, V, roughnessFactor, f0) * iblIntensity;
-#endif
     float3 totalDiffuse = diffuse + pointDiffuse + iblDiffuse;
     float3 totalSpecular = specular + pointSpecular + iblSpecular;
 
@@ -188,14 +181,8 @@ void main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     totalSpecular = lerp(totalSpecular, totalSpecular * occlusionFactor, occlusionStrength);
 
     float3 emissive = emissiveFactor;
-#if 0
-    float rimPower = lightDirection.w;
-    float3 rim = CalcRimLight(N, V, rimColor.rgb, rimPower) * rimIntensity;
-#endif
-    float3 Lo = totalDiffuse + totalSpecular + emissive /* + rim*/;
+    float3 Lo = totalDiffuse + totalSpecular + emissive ;
 
-    // Match only the visible surface at this exact pixel, before post effects.
-    // Keep the existing lighting for occluded surfaces or unavailable resources.
     if (use_scene_color_capture > 0.5f && scene_color_capture_ready > 0.5f
         && all(isfinite(pin.position.xyz))
         && pin.position.z >= 0.0f && pin.position.z <= 1.0f)
@@ -204,9 +191,7 @@ void main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         huskSceneColor.GetDimensions(colorWidth, colorHeight);
         huskSceneDepth.GetDimensions(depthWidth, depthHeight);
         // Capture viewport is the full, origin-zero HDR framebuffer viewport.
-        if (colorWidth == depthWidth && colorHeight == depthHeight
-            && all(pin.position.xy >= 0.0f)
-            && pin.position.x < (float)colorWidth && pin.position.y < (float)colorHeight)
+        if (colorWidth == depthWidth && colorHeight == depthHeight&& all(pin.position.xy >= 0.0f)&& pin.position.x < (float)colorWidth && pin.position.y < (float)colorHeight)
         {
             const int2 pixel = int2(pin.position.xy);
             const float sceneDepth = huskSceneDepth.Load(int3(pixel, 0));
@@ -228,55 +213,6 @@ void main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     p.velocity = 0;
     p.age = 0;
     p.state = 0;
-    p.normalizedX = saturate(
-        (pin.wPosition.x - world_x_min) / max(world_x_max - world_x_min, 0.0001));
+    p.normalizedX = saturate((pin.wPosition.x - world_x_min) / max(world_x_max - world_x_min, 0.0001));
     particleBuffer.Append(p);
 }
-#else
-Texture2D textureMaps[4] : register(t0);
-
-struct PARTICLE
-{
-    float4 color;
-    float3 position;
-    float3 normal;
-    float3 velocity;
-    float age;
-    int state;
-};
-AppendStructuredBuffer<PARTICLE> particleBuffer : register(u1);
-
-void main(VS_OUT pin)
-{
-    float4 color = textureMaps[0].Sample(samplerStates[ANISOTROPIC], pin.texcoord);
-    float alpha = color.a;
-    
-    const float GAMMA = 2.3;
-    color.rgb = pow(color.rgb, GAMMA);
-    
-    float3 N = normalize(pin.wNormal.xyz);
-    float3 T = normalize(pin.wTangent.xyz);
-    float sigma = pin.wTangent.w;
-    T = normalize(T - dot(N, T));
-    float3 B = normalize(cross(N, T) * sigma);
-    
-    float4 normal = textureMaps[1].Sample(samplerStates[LINEAR], pin.texcoord);
-    normal = (normal * 2.0) - 1.0;
-    N = normalize((normal.x * T) + (normal.y * B) + (normal.z * N));
-    
-    float3 L = normalize(-lightDirection.xyz);
-    float3 diffuse = color.rgb * max(0, dot(N, L));
-    float3 V = normalize(cameraPosition.xyz - pin.wPosition.xyz);
-    float3 specular = pow(max(0, dot(N, normalize(V + L))), 128);
-    float3 ambient = color.rgb * 0.2;
-    
-    PARTICLE p;
-    p.color = float4(max(0, ambient + diffuse + specular), alpha) /** pin.color*/;
-    p.position = pin.wPosition.xyz;
-    p.normal = N.xyz;
-    p.velocity = 0;
-    p.age = 0;
-    p.state = 0;
-    particleBuffer.Append(p);
-}
-#endif

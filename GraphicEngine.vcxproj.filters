@@ -103,9 +103,6 @@
     <ClCompile Include="Source\Engine\Debug\DebugRender.cpp">
       <Filter>Source\Engine\Debug</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Debug\EditorGizmo.cpp">
-      <Filter>Source\Engine\Debug</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Debug\Logger.cpp">
       <Filter>Source\Engine\Debug</Filter>
     </ClCompile>
@@ -147,9 +144,6 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Audio\Audio.cpp">
       <Filter>Source\Engine\Audio</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Input\GamePad.cpp">
-      <Filter>Source\Engine\Input</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Input\InputSystem.cpp">
       <Filter>Source\Engine\Input</Filter>
@@ -528,9 +522,6 @@
     <ClInclude Include="Source\Engine\Debug\DebugRender.h">
       <Filter>Source\Engine\Debug</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Debug\EditorGizmo.h">
-      <Filter>Source\Engine\Debug</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\Debug\Logger.h">
       <Filter>Source\Engine\Debug</Filter>
     </ClInclude>
@@ -608,9 +599,6 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Audio\Audio.h">
       <Filter>Source\Engine\Audio</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Input\GamePad.h">
-      <Filter>Source\Engine\Input</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Input\InputSystem.h">
       <Filter>Source\Engine\Input</Filter>
@@ -1025,12 +1013,6 @@
     <FxCompile Include="Shader\GltfModelPlayerWeaponDeferredPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Shader\DarkStageSkyPS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Shader\DeferredLightingDefaultPS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
     <FxCompile Include="Shader\DepthOfFieldPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
@@ -1178,13 +1160,7 @@
     <FxCompile Include="Shader\SsaoPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Shader\ShaderToyVS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
     <FxCompile Include="Shader\SkyBoxPS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Shader\SkyMapGBufferPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Shader\SkyMapPS.hlsl">

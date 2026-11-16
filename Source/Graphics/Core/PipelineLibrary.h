@@ -431,36 +431,12 @@ public:
             AddPipeLineState("pointLightSkeletalMesh", desc);
         }
 
-
-
-
         // deferred キャラクターの髪の毛とかファー 用
         {
             hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelHairOrFurDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
             desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_NONE;
             AddPipeLineState("characterFurAndHairSkeletalMesh", desc);
-        }
-
-        // elasticBuilding forward Blend 用
-        {
-            hr = CreateVsFromCSO(device, "./Data/Shaders/ElasticBuildsVS.cso", desc.vertexShader.ReleaseAndGetAddressOf(), desc.inputLayout.ReleaseAndGetAddressOf(), inputElementDesc, _countof(inputElementDesc));
-            _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelForwardTransparencyPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
-            _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-            desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA;
-            AddPipeLineState("elasticBuildingForward", desc);
-        }
-
-        // elasticBuilding deferred Blend 用
-        {
-            hr = CreateVsFromCSO(device, "./Data/Shaders/ElasticBuildsVS.cso", desc.vertexShader.ReleaseAndGetAddressOf(), desc.inputLayout.ReleaseAndGetAddressOf(), inputElementDesc, _countof(inputElementDesc));
-            _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
-            _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-            desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_NONE;
-            desc.rasterState = RASTERIZE_STATE::SOLID_CULL_NONE;
-            AddPipeLineState("elasticBuildingDeferred", desc);
         }
 
         // SkeletalMesh Cascade ShadowMap 用
@@ -472,18 +448,6 @@ public:
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
             AddPipeLineState("CascadeShadowMapSkeletalMesh", desc);
         }
-
-        // ElasticBuilding Cascade ShadowMap 用
-        {
-            desc.pixelShader = nullptr;
-            hr = CreateVsFromCSO(device, "./Data/Shaders/ElasticBuildingCsmVS.cso", desc.vertexShader.ReleaseAndGetAddressOf(), NULL, NULL, 0);
-            _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-            hr = CreateGsFromCSO(device, "./Data/Shaders/GltfModelCsmGS.cso", desc.geometryShader.ReleaseAndGetAddressOf());
-            _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-            AddPipeLineState("CascadeShadowMapElasticBuilding", desc);
-        }
-
-
     }
 
     const PipeLineStateDesc& Get(const std::string& name)const
@@ -519,7 +483,6 @@ public:
 
         RenderState::BindDepthStencilState(immediateContext, sets_[name].depthState);
         RenderState::BindBlendState(immediateContext, sets_[name].blendState);
-        //RenderState::BindRasterizerState(immediateContext, sets_[name].rasterState);
     }
 
 

@@ -16,9 +16,7 @@
 
 namespace
 {
-    DirectX::XMFLOAT4 CreateDeathWideLookRotation(
-        const DirectX::XMFLOAT3& eye,
-        const DirectX::XMFLOAT3& target)
+    DirectX::XMFLOAT4 CreateDeathWideLookRotation(const DirectX::XMFLOAT3& eye,const DirectX::XMFLOAT3& target)
     {
         using namespace DirectX;
         XMFLOAT3 direction = MathHelper::Subtract(target, eye);
@@ -28,8 +26,6 @@ namespace
             direction = MathHelper::Normalize(direction);
 
         const float yaw = atan2f(direction.x, direction.z);
-        // XMVector3Rotate(+Z, qPitch * qYaw) uses the opposite sign for
-        // camera elevation, so invert the geometric pitch here.
         const float pitch = -asinf(std::clamp(direction.y, -1.0f, 1.0f));
         const XMVECTOR qYaw = XMQuaternionRotationAxis(
             XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), yaw);
@@ -109,7 +105,6 @@ namespace
             return false;
         }
 
-        // Reject an anchor whose own sphere starts inside world geometry.
         const DirectX::XMFLOAT3 probeDirection = MathHelper::Normalize(
             MathHelper::Subtract(anchorPosition, lookPoint));
         const DirectX::XMFLOAT3 probeEnd = MathHelper::Add(
@@ -137,10 +132,6 @@ namespace
             return false;
         }
 
-        // There is no overlap-sphere query in the current Physics facade.
-        // Approximate the camera safety volume with short sweeps in all axes
-        // around the candidate anchor.  This does not move or resolve the
-        // camera; it only rejects an unsafe candidate.
         const DirectX::XMFLOAT3 spaceProbeDirections[] =
         {
             { 1.0f, 0.0f, 0.0f }, { -1.0f, 0.0f, 0.0f },
@@ -225,14 +216,11 @@ void MovieCameraManagerActor::Update(float deltaTime)
         }
         else
         {
-            // CameraManager renders Cinematic before Movie, so preserve the movie
-            // presentation while the jail door opens and Aurora stands.
             if (cameraManager->IsUseCinematic())
                 cameraManager->ToggleCinematicCamera(GetOwnerConstScene());
 
             if (!cameraManager->IsUseMovie())
             {
-                // Stop/toggle-off is an interruption, not a path completion.
                 FinishPrisonOpeningMovie();
             }
             else if (prisonOpeningState == PrisonOpeningState::CameraPathPlaying)
@@ -617,8 +605,6 @@ bool MovieCameraManagerActor::PlayPrisonOpeningMovie()
     if (!gameScene || !movieCamera || !cameraManager || prisonOpeningMoviePlaying)
         return false;
 
-    // CameraManager renders Cinematic before Movie.  A left-over cinematic mode
-    // would otherwise hide this runtime movie and later continue to override TPS.
     if (cameraManager->IsUseCinematic())
         cameraManager->ToggleCinematicCamera(GetOwnerConstScene());
     if (const auto player = scene->GetActorManager()->GetActorOfType<Player>())
@@ -1031,8 +1017,6 @@ void MovieCameraManagerActor::UpdatePrisonOpeningEyeOpening()
     prisonOpeningCurrentEyeWeight = 1.0f - smoothStep;
     player->SetPrisonOpeningEyeClosedWeight(prisonOpeningCurrentEyeWeight);
 
-    // Preview is confined to an active prison movie and must not consume the
-    // override.  Normal playback clears only after it has reached the base pose.
     if (!prisonOpeningEyeOpeningPreview && normalizedTime >= 1.0f)
         EndPrisonOpeningEyeOverride();
 }

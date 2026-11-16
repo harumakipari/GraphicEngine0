@@ -62,11 +62,8 @@ void AnimationController::OnUpdate(const float deltaTime)
     if (runtimeHeldPoseTransitionActive)
     {
         blendElapsedTime += (std::max)(0.0f, deltaTime);
-        blendFactor = transitionTime > FLT_EPSILON
-            ? std::clamp(blendElapsedTime / transitionTime, 0.0f, 1.0f)
-            : 1.0f;
-        target->model->BlendAnimations(
-            animationNodes[Origin], runtimeHeldPoseNodes, blendFactor, finalNodes);
+        blendFactor = transitionTime > FLT_EPSILON ? std::clamp(blendElapsedTime / transitionTime, 0.0f, 1.0f) : 1.0f;
+        target->model->BlendAnimations(animationNodes[Origin], runtimeHeldPoseNodes, blendFactor, finalNodes);
         target->SetModelNodes(finalNodes);
         target->UpdateChildTransforms(UpdateTransformFlags::None);
         for (auto* extraTarget : extraTargets)
@@ -74,7 +71,6 @@ void AnimationController::OnUpdate(const float deltaTime)
             extraTarget->SetModelNodes(finalNodes);
             extraTarget->UpdateChildTransforms(UpdateTransformFlags::None);
         }
-
         if (blendFactor >= 1.0f)
         {
             finalNodes = runtimeHeldPoseNodes;
@@ -106,24 +102,21 @@ void AnimationController::OnUpdate(const float deltaTime)
     {
         // Focus中は通常アニメーション時間を進めない
         // 通常クリップのSpeed Curveも評価しない
+        constexpr float locomotionPlayRate = 1.0f;
         locomotionTime += deltaTime * locomotionPlayRate;
     }
     else
     {
         // 通常NotifyやRoot Motionで使用する前回時刻
         prevAnimationTime = animationTime;
-
         const size_t rateClip = transitionState == AnimationTransitionState::Completed ? animationClip : animationNextClip;
 
         // 配列範囲を確認
-        if (rateClip >=
-            target->model->animations.size())
+        if (rateClip >= target->model->animations.size())
         {
             return;
         }
-
-        if (rateClip >=
-            animationNotifyAssets.size())
+        if (rateClip >= animationNotifyAssets.size())
         {
             return;
         }
@@ -225,17 +218,17 @@ void AnimationController::OnUpdate(const float deltaTime)
             }
             break;
         case AnimationTransitionState::Completed:
-        {
-            target->model->Animate(this->animationClip, animationTime, finalNodes);
-            const float duration = target->model->animations.at(animationClip).duration;
-            const float effectiveDuration = playbackEndTime >= 0.0f ? (std::min)(duration, playbackEndTime) : duration;
-            if (!isAnimationLoop && animationTime >= effectiveDuration)
             {
-                animationTime = effectiveDuration;
-                isAnimationFinished = true;
+                target->model->Animate(this->animationClip, animationTime, finalNodes);
+                const float duration = target->model->animations.at(animationClip).duration;
+                const float effectiveDuration = playbackEndTime >= 0.0f ? (std::min)(duration, playbackEndTime) : duration;
+                if (!isAnimationLoop && animationTime >= effectiveDuration)
+                {
+                    animationTime = effectiveDuration;
+                    isAnimationFinished = true;
+                }
             }
-        }
-        break;
+            break;
         default:
             break;
         }
@@ -373,110 +366,13 @@ void AnimationController::AddAnimation(const std::string& animationName, const s
     animationAssetOrder.push_back(animationClip);
 }
 
-bool AnimationController::EvaluateWeaponVisualState(bool& outShowTrail, float& outEmissivePower, bool& outHasShowTrail, bool& outHasShowEmissive) const
-{
-    outShowTrail = false;
-    outEmissivePower = 0.0f;
-    outHasShowTrail = false;
-    outHasShowEmissive = false;
-
-    const size_t clip = editorPreviewActive ? selectedTimelineClip : animationClip;
-    const float time = editorPreviewActive ? editorPreviewTime : animationTime;
-    const auto assetIt = animationNotifyAssets.find(clip);
-    if (assetIt == animationNotifyAssets.end())
-        return false;
-
-    bool hasWeaponVisualState = false;
-    for (const auto& state : assetIt->second.notifyTrack.states)
-    {
-        const bool active = time >= state.startTime && time < state.endTime;
-        switch (state.type)
-        {
-        case AnimationNotifyState::Type::ShowTrail:
-            hasWeaponVisualState = true;
-            outHasShowTrail = true;
-            outShowTrail = outShowTrail || active;
-            break;
-        case AnimationNotifyState::Type::ShowEmissive:
-            hasWeaponVisualState = true;
-            outHasShowEmissive = true;
-            if (active)
-                outEmissivePower = state.value;
-            break;
-        default:
-            break;
-        }
-    }
-    return hasWeaponVisualState;
-}
-void AnimationController::ResetRootMotion(const std::string& animationName, const bool loop, const bool isBlend, const float blendTime)
-{
-
-    const auto animationIt = animationNameToIndex.find(animationName);
-    if (animationIt == animationNameToIndex.end())
-    {
-        Logger::Warning(std::format("Animation not found: {}", animationName));
-        return;
-    }
-
-    const size_t requestedClip = animationIt->second;
-    const bool requestedRemoveRootTranslation =removeRootTranslationFromPoseClips.contains(requestedClip);
-    const bool outgoingPoseRemovesRootTranslation =currentAnimationRemovesRootTranslation ||removeRootTranslationDuringTransition;
-    removeRootTranslationDuringTransition =isBlend && (outgoingPoseRemovesRootTranslation |requestedRemoveRootTranslation);
-    currentAnimationRemovesRootTranslation =requestedRemoveRootTranslation;
-    this->ignoreRootMotion = ignoreRootMotion;
-    // 同じ遷移先を遷移中に再要求しても、
-    // blendElapsedTime / blendFactor を先頭へ戻さない
-    if (transitionState != AnimationTransitionState::Completed &&animationNextClip == requestedClip)
-    {
-        return;
-    }
-
-    notifyAnimationClip = requestedClip;
-    float requestedAnimationTime = 0.0f;
-    const bool isLocomotionAnimation =animationName == "Walk_Fwd" ||animationName == "Jog_Fwd";
-    const bool preserveLocomotionPhase =pendingLocomotionPhaseTransfer &&isLocomotionAnimation;
-    const float requestedDuration =target->model->animations.at(requestedClip).duration;
-    if (preserveLocomotionPhase &&requestedDuration > FLT_EPSILON)
-    {
-        requestedAnimationTime =pendingLocomotionPhase *requestedDuration;
-    }
-    // 次のアニメーション要求だけが対象
-    // Walk/Jog以外が来た場合も古い位相を残さない
-    pendingLocomotionPhaseTransfer = false;
-    animationTime = requestedAnimationTime;
-    prevAnimationTime = requestedAnimationTime;
-    playbackEndTime = -1.0f;
-    animationNextClip = requestedClip;
-    this->isAnimationFinished = false;
-    currentAnimationName = animationName;
-    InterleavedGltfModel::Node& node = finalNodes.at(rootNodeIndex);
-    resetRootMotionDelta = true;
-    zeroTranslation = node.translation;
-    isAnimationLoop = loop;
-    // アニメーションが変わった時にステートなどを変更する
-    owner->OnAnimationChanged();
-
-    if (isBlend)
-    {
-        transitionTime = blendTime;
-        animationNodes[Origin] = finalNodes;
-        transitionState = AnimationTransitionState::NotStarted;
-    }
-    else
-    { // ブレンドしないなら現在のアニメーションを次のアニメーションに変更する
-        this->animationClip = requestedClip;
-        transitionState = AnimationTransitionState::Completed;
-    }
-}
-
 bool AnimationController::PlayAnimationImmediate(const std::string& animationName, const bool loop, const bool ignoreRootMotion)
 {
     if (!target || !target->model)
         return false;
 
     const auto animationIt = animationNameToIndex.find(animationName);
-    if (animationIt == animationNameToIndex.end() ||animationIt->second >= target->model->animations.size())
+    if (animationIt == animationNameToIndex.end() || animationIt->second >= target->model->animations.size())
     {
         Logger::Warning(std::format("Animation not found for immediate playback: {}", animationName));
         return false;
@@ -485,7 +381,7 @@ bool AnimationController::PlayAnimationImmediate(const std::string& animationNam
     EndEditorPreview();
 
     const size_t requestedClip = animationIt->second;
-    currentAnimationRemovesRootTranslation =removeRootTranslationFromPoseClips.contains(requestedClip);
+    currentAnimationRemovesRootTranslation = removeRootTranslationFromPoseClips.contains(requestedClip);
     removeRootTranslationDuringTransition = false;
     suppressNormalRootMotionUntilTransitionCompleted = false;
     suppressNormalRootMotionObservedTransition = false;
@@ -516,7 +412,8 @@ bool AnimationController::PlayAnimationImmediate(const std::string& animationNam
     animationNodes[Origin] = finalNodes;
     animationNodes[Next] = finalNodes;
     const InterleavedGltfModel::Node& rootNode = finalNodes.at(rootNodeIndex);
-    previousPosition = {
+    previousPosition =
+    {
         rootNode.globalTransform._41,
         rootNode.globalTransform._42,
         rootNode.globalTransform._43
@@ -528,76 +425,13 @@ bool AnimationController::PlayAnimationImmediate(const std::string& animationNam
     owner->OnAnimationChanged();
     return true;
 }
-
-
-void AnimationController::DrawImGui()
-{
-#ifdef USE_IMGUI
-    DrawTimeline();
-#endif
-}
-
-bool AnimationController::ConfigureLocalPoseOverride(const std::string& sourceAnimationName, const float sourceTime, const std::vector<std::string>& boneNames)
-{
-    ClearLocalPoseOverride();
-
-    if (!target || !target->model)
-        return false;
-
-    const auto animationIt = animationNameToIndex.find(sourceAnimationName);
-    if (animationIt == animationNameToIndex.end() ||
-        animationIt->second >= target->model->animations.size())
-    {
-        return false;
-    }
-
-    std::vector<InterleavedGltfModel::Node> sampledNodes =
-        target->model->GetNodes();
-    target->model->Animate(animationIt->second, sourceTime, sampledNodes);
-
-    localPoseOverrideBones.reserve(boneNames.size());
-    for (const std::string& boneName : boneNames)
-    {
-        const int nodeIndex = target->FindIndexByName(boneName);
-        if (nodeIndex < 0 || static_cast<size_t>(nodeIndex) >= sampledNodes.size())
-        {
-            ClearLocalPoseOverride();
-            return false;
-        }
-
-        const auto& sampledNode = sampledNodes[static_cast<size_t>(nodeIndex)];
-        localPoseOverrideBones.push_back({
-            static_cast<size_t>(nodeIndex),
-            sampledNode.translation,
-            sampledNode.rotation });
-    }
-
-    localPoseOverrideActive = !localPoseOverrideBones.empty();
-    return localPoseOverrideActive;
-}
-
-
-void AnimationController::SetLocalPoseOverrideWeight(const float weight)
-{
-    localPoseOverrideWeight = std::clamp(weight, 0.0f, 1.0f);
-}
-
-void AnimationController::ClearLocalPoseOverride()
-{
-    localPoseOverrideBones.clear();
-    localPoseOverrideWeight = 0.0f;
-    localPoseOverrideActive = false;
-}
-
 // ルートモーションをリセットする
 bool AnimationController::SetPlaybackRange(const float startTime, const float endTime)
 {
     if (!target || !target->model || isAnimationLoop)
         return false;
 
-    const size_t clip = transitionState == AnimationTransitionState::Completed
-        ? animationClip
-        : animationNextClip;
+    const size_t clip = transitionState == AnimationTransitionState::Completed ? animationClip : animationNextClip;
     if (clip >= target->model->animations.size())
         return false;
 
@@ -614,15 +448,146 @@ bool AnimationController::SetPlaybackRange(const float startTime, const float en
     return true;
 }
 
-bool AnimationController::HoldAnimationPose(
-    const std::string& animationName, const float time)
+void AnimationController::ResetRootMotion(const std::string& animationName, const bool loop, const bool isBlend, const float blendTime)
+{
+    const auto animationIt = animationNameToIndex.find(animationName);
+    if (animationIt == animationNameToIndex.end())
+    {
+        Logger::Warning(std::format("Animation not found: {}", animationName));
+        return;
+    }
+
+    const size_t requestedClip = animationIt->second;
+    const bool requestedRemoveRootTranslation = removeRootTranslationFromPoseClips.contains(requestedClip);
+    const bool outgoingPoseRemovesRootTranslation = currentAnimationRemovesRootTranslation || removeRootTranslationDuringTransition;
+    removeRootTranslationDuringTransition = isBlend && (outgoingPoseRemovesRootTranslation | requestedRemoveRootTranslation);
+    currentAnimationRemovesRootTranslation = requestedRemoveRootTranslation;
+    this->ignoreRootMotion = ignoreRootMotion;
+    // 同じ遷移先を遷移中に再要求しても、
+    // blendElapsedTime / blendFactor を先頭へ戻さない
+    if (transitionState != AnimationTransitionState::Completed && animationNextClip == requestedClip)
+    {
+        return;
+    }
+
+    notifyAnimationClip = requestedClip;
+    float requestedAnimationTime = 0.0f;
+    const bool isLocomotionAnimation = animationName == "Walk_Fwd" || animationName == "Jog_Fwd";
+    const bool preserveLocomotionPhase = pendingLocomotionPhaseTransfer && isLocomotionAnimation;
+    const float requestedDuration = target->model->animations.at(requestedClip).duration;
+    if (preserveLocomotionPhase && requestedDuration > FLT_EPSILON)
+    {
+        requestedAnimationTime = pendingLocomotionPhase * requestedDuration;
+    }
+    // 次のアニメーション要求だけが対象
+    // Walk/Jog以外が来た場合も古い位相を残さない
+    pendingLocomotionPhaseTransfer = false;
+    animationTime = requestedAnimationTime;
+    prevAnimationTime = requestedAnimationTime;
+    playbackEndTime = -1.0f;
+    animationNextClip = requestedClip;
+    this->isAnimationFinished = false;
+    currentAnimationName = animationName;
+    InterleavedGltfModel::Node& node = finalNodes.at(rootNodeIndex);
+    resetRootMotionDelta = true;
+    zeroTranslation = node.translation;
+    isAnimationLoop = loop;
+    // アニメーションが変わった時にステートなどを変更する
+    owner->OnAnimationChanged();
+    if (isBlend)
+    {
+        transitionTime = blendTime;
+        animationNodes[Origin] = finalNodes;
+        transitionState = AnimationTransitionState::NotStarted;
+    }
+    else
+    { // ブレンドしないなら現在のアニメーションを次のアニメーションに変更する
+        this->animationClip = requestedClip;
+        transitionState = AnimationTransitionState::Completed;
+    }
+}
+
+
+void AnimationController::SetEnableRootMotion(const bool enableRootMotion)
+{
+    this->enableRootMotion = enableRootMotion;
+
+    if (!enableRootMotion)
+    {
+        blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };
+        blendSpaceRootMotionValid = false;
+        resetLocomotionRootMotion = true;
+    }
+}
+
+void AnimationController::SetRemoveRootTranslationFromPose(const std::string& animationName, const bool remove)
+{
+    const auto animationIt = animationNameToIndex.find(animationName);
+    if (animationIt == animationNameToIndex.end())
+    {
+        Logger::Warning(std::format("Animation not found for in-place setting: {}", animationName));
+        return;
+    }
+
+    if (remove)
+        removeRootTranslationFromPoseClips.emplace(animationIt->second);
+    else
+        removeRootTranslationFromPoseClips.erase(animationIt->second);
+}
+
+
+bool AnimationController::ConfigureLocalPoseOverride(const std::string& sourceAnimationName, const float sourceTime, const std::vector<std::string>& boneNames)
+{
+    ClearLocalPoseOverride();
+
+    if (!target || !target->model)
+        return false;
+
+    const auto animationIt = animationNameToIndex.find(sourceAnimationName);
+    if (animationIt == animationNameToIndex.end() | animationIt->second >= target->model->animations.size())
+    {
+        return false;
+    }
+
+    std::vector<InterleavedGltfModel::Node> sampledNodes = target->model->GetNodes();
+    target->model->Animate(animationIt->second, sourceTime, sampledNodes);
+
+    localPoseOverrideBones.reserve(boneNames.size());
+    for (const std::string& boneName : boneNames)
+    {
+        const int nodeIndex = target->FindIndexByName(boneName);
+        if (nodeIndex < 0 || static_cast<size_t>(nodeIndex) >= sampledNodes.size())
+        {
+            ClearLocalPoseOverride();
+            return false;
+        }
+
+        const auto& sampledNode = sampledNodes[static_cast<size_t>(nodeIndex)];
+        localPoseOverrideBones.push_back({ static_cast<size_t>(nodeIndex),sampledNode.translation,sampledNode.rotation });
+    }
+    localPoseOverrideActive = !localPoseOverrideBones.empty();
+    return localPoseOverrideActive;
+}
+
+void AnimationController::SetLocalPoseOverrideWeight(const float weight)
+{
+    localPoseOverrideWeight = std::clamp(weight, 0.0f, 1.0f);
+}
+
+void AnimationController::ClearLocalPoseOverride()
+{
+    localPoseOverrideBones.clear();
+    localPoseOverrideWeight = 0.0f;
+    localPoseOverrideActive = false;
+}
+
+bool AnimationController::HoldAnimationPose(const std::string& animationName, const float time)
 {
     if (!target || !target->model)
         return false;
 
     const auto animationIt = animationNameToIndex.find(animationName);
-    if (animationIt == animationNameToIndex.end() ||
-        animationIt->second >= target->model->animations.size())
+    if (animationIt == animationNameToIndex.end() || animationIt->second >= target->model->animations.size())
     {
         return false;
     }
@@ -644,8 +609,7 @@ bool AnimationController::HoldAnimationPose(
 }
 
 
-bool AnimationController::BlendToHeldAnimationPose(
-    const std::string& animationName, const float time, const float blendTime)
+bool AnimationController::BlendToHeldAnimationPose(const std::string& animationName, const float time, const float blendTime)
 {
     if (!target || !target->model)
         return false;
@@ -769,34 +733,43 @@ const AnimationNotifyAsset* AnimationController::GetAnimationAsset(const std::st
     return &assetIt->second;
 }
 
-void AnimationController::SetRemoveRootTranslationFromPose(
-    const std::string& animationName, const bool remove)
+bool AnimationController::EvaluateWeaponVisualState(bool& outShowTrail, float& outEmissivePower, bool& outHasShowTrail, bool& outHasShowEmissive) const
 {
-    const auto animationIt = animationNameToIndex.find(animationName);
-    if (animationIt == animationNameToIndex.end())
-    {
-        Logger::Warning(std::format(
-            "Animation not found for in-place setting: {}", animationName));
-        return;
-    }
+    outShowTrail = false;
+    outEmissivePower = 0.0f;
+    outHasShowTrail = false;
+    outHasShowEmissive = false;
 
-    if (remove)
-        removeRootTranslationFromPoseClips.emplace(animationIt->second);
-    else
-        removeRootTranslationFromPoseClips.erase(animationIt->second);
+    const size_t clip = editorPreviewActive ? selectedTimelineClip : animationClip;
+    const float time = editorPreviewActive ? editorPreviewTime : animationTime;
+    const auto assetIt = animationNotifyAssets.find(clip);
+    if (assetIt == animationNotifyAssets.end())
+        return false;
+
+    bool hasWeaponVisualState = false;
+    for (const auto& state : assetIt->second.notifyTrack.states)
+    {
+        const bool active = time >= state.startTime && time < state.endTime;
+        switch (state.type)
+        {
+        case AnimationNotifyState::Type::ShowTrail:
+            hasWeaponVisualState = true;
+            outHasShowTrail = true;
+            outShowTrail = outShowTrail || active;
+            break;
+        case AnimationNotifyState::Type::ShowEmissive:
+            hasWeaponVisualState = true;
+            outHasShowEmissive = true;
+            if (active)
+                outEmissivePower = state.value;
+            break;
+        default:
+            break;
+        }
+    }
+    return hasWeaponVisualState;
 }
 
-void AnimationController::SetEnableRootMotion(const bool enableRootMotion)
-{
-    this->enableRootMotion = enableRootMotion;
-
-    if (!enableRootMotion)
-    {
-        blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };
-        blendSpaceRootMotionValid = false;
-        resetLocomotionRootMotion = true;
-    }
-}
 // 全てのNotifyAssetsをロードする
 void AnimationController::LoadAllNotifyAssets(const std::string& ownerName)
 {
@@ -818,14 +791,11 @@ void AnimationController::LoadAllNotifyAssets(const std::string& ownerName)
         }
 
         const size_t registeredClip = animationIt->second;
-
         if (asset.animationClip != registeredClip)
         {
             Logger::Warning("Remap animation asset");
         }
-
         asset.animationClip = registeredClip;
-
 
         if (owner)
         {
@@ -834,10 +804,19 @@ void AnimationController::LoadAllNotifyAssets(const std::string& ownerName)
         animationNotifyAssets[registeredClip] = asset;
     }
 }
+AnimationNotifyAsset* AnimationController::GetNotifyAssetForRuntimeTuning(const size_t clip)
+{
+    const auto it = animationNotifyAssets.find(clip);
+    return it != animationNotifyAssets.end() ? &it->second : nullptr;
+}
 
-AnimationController::RuntimeDangerObbSaveResult AnimationController::SaveDangerObbForRuntimeTuning(
-    size_t clip, size_t stateIndex, const AnimationNotifyState& state,
-    std::string& outFilePath)
+const AnimationNotifyAsset* AnimationController::GetNotifyAssetForRuntimeTuning(const size_t clip) const
+{
+    const auto it = animationNotifyAssets.find(clip);
+    return it != animationNotifyAssets.end() ? &it->second : nullptr;
+}
+
+AnimationController::RuntimeDangerObbSaveResult AnimationController::SaveDangerObbForRuntimeTuning(size_t clip, size_t stateIndex, const AnimationNotifyState& state, std::string& outFilePath)
 {
     namespace fs = std::filesystem;
     using json = nlohmann::json;
@@ -880,15 +859,15 @@ AnimationController::RuntimeDangerObbSaveResult AnimationController::SaveDangerO
         return RuntimeDangerObbSaveResult::DangerWindowNotFound;
 
     auto matchesSelectedDanger = [&state](const json& jsonState)
-        {
-            if (!jsonState.is_object() || jsonState.value("type", std::string{}) != "DangerWindow")
-                return false;
-            constexpr float timeTolerance = 0.0001f;
-            const float start = jsonState.value("startTime", -FLT_MAX);
-            const float end = jsonState.value("endTime", -FLT_MAX);
-            return std::abs(start - state.startTime) <= timeTolerance &&
-                std::abs(end - state.endTime) <= timeTolerance;
-        };
+    {
+        if (!jsonState.is_object() || jsonState.value("type", std::string{}) != "DangerWindow")
+            return false;
+        constexpr float timeTolerance = 0.0001f;
+        const float start = jsonState.value("startTime", -FLT_MAX);
+        const float end = jsonState.value("endTime", -FLT_MAX);
+        return std::abs(start - state.startTime) <= timeTolerance &&
+            std::abs(end - state.endTime) <= timeTolerance;
+    };
 
     size_t jsonStateIndex = static_cast<size_t>(-1);
     if (stateIndex < root["states"].size() && matchesSelectedDanger(root["states"][stateIndex]))
@@ -953,29 +932,14 @@ AnimationController::RuntimeDangerObbSaveResult AnimationController::SaveDangerO
     fs::copy_file(temporaryPath, outFilePath, fs::copy_options::overwrite_existing, writeError);
     std::error_code cleanupError;
     fs::remove(temporaryPath, cleanupError);
-    return writeError
-        ? RuntimeDangerObbSaveResult::JsonWriteFailed
-        : RuntimeDangerObbSaveResult::Saved;
-}
-
-AnimationNotifyAsset* AnimationController::GetNotifyAssetForRuntimeTuning(const size_t clip)
-{
-    const auto it = animationNotifyAssets.find(clip);
-    return it != animationNotifyAssets.end() ? &it->second : nullptr;
-}
-
-const AnimationNotifyAsset* AnimationController::GetNotifyAssetForRuntimeTuning(const size_t clip) const
-{
-    const auto it = animationNotifyAssets.find(clip);
-    return it != animationNotifyAssets.end() ? &it->second : nullptr;
+    return writeError ? RuntimeDangerObbSaveResult::JsonWriteFailed : RuntimeDangerObbSaveResult::Saved;
 }
 
 // 単一の360度Locomotion BlendSpaceへアニメーションを追加する
 void AnimationController::AddLocomotionBlendAnimation(const std::string& name, const float angle, const float phaseOffset)
 {
     const size_t clip = animationNameToIndex[name];
-    const float normalizedOffset =
-        name == "Jog_Fwd" ? 0.0f : BlendSpace::WrapPhase(phaseOffset);
+    const float normalizedOffset = name == "Jog_Fwd" ? 0.0f : BlendSpace::WrapPhase(phaseOffset);
     locomotionBlendSpace.AddAnimation(clip, angle, normalizedOffset);
 }
 
@@ -996,8 +960,6 @@ void AnimationController::SetUseBlendSpace(const bool use)
     // BlendSpace -> 通常アニメーション
     if (wasUsingBlendSpace && !useBlendSpace)
     {
-        Logger::Log("Disable BlendSpace");
-
         // 位相転送はRootMotion抑制とは別に管理する
         const float blendDuration = GetLocomotionDuration();
 
@@ -1029,12 +991,8 @@ void AnimationController::SetUseBlendSpace(const bool use)
     // 通常アニメーション → BlendSpace
     if (!wasUsingBlendSpace && use)
     {
-        Logger::Log("Enable BlendSpace");
-
         bool phaseTransferSucceeded = false;
-
         const size_t phaseSourceClip = transitionState == AnimationTransitionState::Completed ? animationClip : animationNextClip;
-
         const float blendSpaceDuration = GetLocomotionDuration();
 
         if (target && target->model && phaseSourceClip <target->model->animations.size() && blendSpaceDuration >FLT_EPSILON)
@@ -1071,109 +1029,336 @@ void AnimationController::SetUseBlendSpace(const bool use)
         animationNodes[Origin] = finalNodes;
     }
 }
-void AnimationController::DrawTimeline()
+
+void AnimationController::DrawImGui()
 {
 #ifdef USE_IMGUI
-    ImGui::Begin("Animation Sequence");
+    DrawTimeline();
+#endif
+}
+// ブレンドスペースを更新する
+void AnimationController::UpdateBlendSpace(const float deltaTime)
+{
+    // デバッグ固定方向はPose評価だけに使用し、Playerの移動入力は変更しない。
+    DirectX::XMFLOAT2 evaluationInput = blendInput;
 
-    const float availableWidth = ImGui::GetContentRegionAvail().x;
-    const float listWidth = std::clamp(availableWidth * 0.16f, 180.0f, 260.0f);
-    const float inspectorWidth = std::clamp(availableWidth * 0.21f, 220.0f, 320.0f);
-    const float editorWidth = (std::max)(320.0f, availableWidth - listWidth - inspectorWidth);
+    const float locomotionDebugEvaluationAngle = DirectX::XMConvertToDegrees(atan2f(evaluationInput.x, evaluationInput.y));
 
-    ImGui::Columns(3);
-    ImGui::SetColumnWidth(0, listWidth);
-    ImGui::SetColumnWidth(1, editorWidth);
+    constexpr float locomotionBackwardSideMaxWeight = 0.15f;
+    constexpr float locomotionDebugBwdWeight = 0.5f;
 
-    const float animationListHeight = ImGui::GetContentRegionAvail().y;
-    ImGui::BeginChild(U8("アニメーションリスト"), ImVec2(0, animationListHeight), true);
+    // 旧Forward/Backwardグループは保持するが、Locomotion更新では使用しない。
+    std::vector<BlendSpace::BlendResult> weights =
+        locomotionBlendSpace.CalculateWeights(evaluationInput);
 
-    for (auto clip : animationAssetOrder)
+    // 90度ではSide 100%、180度ではBackward 100%を維持する。
+    // 90度直後の短い遷移帯で連続的にSide上限へ収束させる。
+    const float absoluteEvaluationAngle = std::fabs(locomotionDebugEvaluationAngle);
+    if (absoluteEvaluationAngle >= 90.0f && absoluteEvaluationAngle <= 180.0f && weights.size() == 2)
     {
-        auto& listedAsset = animationNotifyAssets[clip];
-        const bool selected = selectedTimelineClip == clip;
-        if (ImGui::Selectable(listedAsset.animationName.c_str(), selected))
+        const auto backwardIt = animationNameToIndex.find("Jog_Bwd");
+        if (backwardIt != animationNameToIndex.end())
         {
-            EndAllEditorPreviewStates();
-            selectedTimelineClip = clip;
-            const std::string filename = "./Data/Animation/" + ownerName + "/" + listedAsset.animationName + ".json";
-            LoadNotifyAsset(filename, listedAsset);
-            editorPreviewTime = 0.0f;
-            BeginEditorPreview(false, true);
-            selectedStateIndex = -1;
-            selectedEventIndex = -1;
-            popupCreateTime = 0.0f;
-            selectedCurveKey = -1;
-            curveCreateTime = 0.0f;
-            curveCreateValue = 1.0f;
+            size_t backwardWeightIndex = weights.size();
+            for (size_t i = 0; i < weights.size(); ++i)
+            {
+                if (weights[i].clip == backwardIt->second)
+                {
+                    backwardWeightIndex = i;
+                    break;
+                }
+            }
+
+            if (backwardWeightIndex < weights.size())
+            {
+                const size_t sideWeightIndex = 1 - backwardWeightIndex;
+                const float sideMaxWeight = std::clamp(locomotionBackwardSideMaxWeight, 0.0f, 0.5f);
+                const float originalSideWeight = weights[sideWeightIndex].weight;
+                const float cappedSideWeight = originalSideWeight < sideMaxWeight ? originalSideWeight : sideMaxWeight;
+
+                constexpr float TransitionAngle = 22.5f;
+                float transition = std::clamp((absoluteEvaluationAngle - 90.0f) / TransitionAngle, 0.0f, 1.0f);
+                transition = transition * transition * (3.0f - 2.0f * transition);
+
+                const float adjustedSideWeight = std::lerp(originalSideWeight, cappedSideWeight, transition);
+                weights[sideWeightIndex].weight = adjustedSideWeight;
+                weights[backwardWeightIndex].weight = 1.0f - adjustedSideWeight;
+            }
         }
     }
-    ImGui::EndChild();
 
-    ImGui::NextColumn();
-    auto it = animationNotifyAssets.find(selectedTimelineClip);
-    if (it == animationNotifyAssets.end())
+    if (weights.size() == 2)
     {
-        ImGui::Columns(1);
-        ImGui::End();
+        const auto bwdIt = animationNameToIndex.find("Jog_Bwd");
+        if (bwdIt != animationNameToIndex.end())
+        {
+            for (size_t i = 0; i < weights.size(); ++i)
+            {
+                if (weights[i].clip == bwdIt->second)
+                {
+                    const float bwdWeight = std::clamp(locomotionDebugBwdWeight, 0.0f, 1.0f);
+                    weights[i].weight = bwdWeight;
+                    weights[1 - i].weight = 1.0f - bwdWeight;
+                    break;
+                }
+            }
+        }
+    }
+    if (weights.empty())
+    {
+        blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };
+        blendSpaceRootMotionValid = false;
+        resetLocomotionRootMotion = true;
         return;
     }
 
-    auto& asset = it->second;
-    const float duration = target->model->animations[asset.animationClip].duration;
-    const float trackHeight = 20.0f;
-    const float labelWidth = 100.0f;
-    const float handleSize = 40.0f;
-    const float height = 30.0f;
-
-    DrawAnimationSettings(asset, duration);
-
-    float width = (std::max)(100.0f, ImGui::GetContentRegionAvail().x - labelWidth - 10.0f);
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
-    ImVec2 timelinePos = ImGui::GetCursorScreenPos();
-    DrawStateTimeline(asset, duration, width, height, labelWidth, trackHeight, handleSize, drawList, timelinePos);
-    ImGui::Dummy(ImVec2(0, 6.0f));
-    DrawEventTimeline(asset, duration, width, labelWidth, trackHeight, drawList);
-
-    if (ImGui::IsKeyPressed(ImGuiKey_Delete))
+    if (weights.size() > blendSpacePoses.size())
     {
-        if (selectedStateIndex >= 0)
+        Logger::Error("BlendSpace weights exceeded pose capacity.");
+        blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };
+        blendSpaceRootMotionValid = false;
+        resetLocomotionRootMotion = true;
+        return;
+    }
+
+    // Jog_Fwdを共通Locomotion cycleの基準durationとして使用する。
+    const float cycleDuration = GetLocomotionDuration();
+    // 前回phaseと今回phaseを確定する
+    float currentLocomotionPhase = 0.0f;
+    if (std::isfinite(locomotionTime) && std::isfinite(cycleDuration) && cycleDuration > FLT_EPSILON)
+    {
+        currentLocomotionPhase = locomotionTime / cycleDuration;
+        currentLocomotionPhase = BlendSpace::WrapPhase(currentLocomotionPhase);
+    }
+
+    bool canExtractRootMotion = enableRootMotion && !ignoreRootMotion;
+
+    if (resetLocomotionRootMotion)
+    {
+        previousLocomotionPhase = currentLocomotionPhase;
+        resetLocomotionRootMotion = false;
+        blendSpaceRootMotionValid = false;
+        blendSpaceRootMotionDelta = { 0.0f,0.0f,0.0f };
+        canExtractRootMotion = false;
+    }
+
+    const auto notifyClipIt = animationNameToIndex.find("Jog_Fwd");
+    if (notifyClipIt != animationNameToIndex.end())
+    {
+        const auto notifyAssetIt = animationNotifyAssets.find(notifyClipIt->second);
+        if (notifyAssetIt != animationNotifyAssets.end())
         {
-            if (selectedStateIndex < static_cast<int>(asset.notifyTrack.states.size()))
+            const float previousNotifyTime = previousLocomotionPhase * cycleDuration;
+            const float currentNotifyTime = currentLocomotionPhase * cycleDuration;
+            const bool wrapped = previousLocomotionPhase > currentLocomotionPhase;
+
+            for (const AnimationNotifyEvent& event : notifyAssetIt->second.notifyTrack.events)
             {
-                EndAllEditorPreviewStates();
-                asset.notifyTrack.states.erase(asset.notifyTrack.states.begin() + selectedStateIndex);
+                const bool crossed = wrapped
+                                         ? ((previousNotifyTime < event.time && event.time <= cycleDuration) ||
+                                             (0.0f < event.time && event.time <= currentNotifyTime))
+                                         : (previousNotifyTime < event.time && event.time <= currentNotifyTime);
+
+                if (crossed)
+                {
+                    OnNotifyEvent(event);
+                }
             }
-            selectedStateIndex = -1;
-        }
-
-        if (selectedEventIndex >= 0)
-        {
-            if (selectedEventIndex < static_cast<int>(asset.notifyTrack.events.size()))
-                asset.notifyTrack.events.erase(asset.notifyTrack.events.begin() + selectedEventIndex);
-            selectedEventIndex = -1;
         }
     }
 
-    const std::string curveHeader = "Animation Curve [" + std::to_string(asset.speedCurve.keys.size()) + " Keys]###SpeedCurveHeader";
-    ImGui::SetNextItemOpen(false, ImGuiCond_Once);
-    if (ImGui::CollapsingHeader(curveHeader.c_str()))
+    blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };
+    blendSpaceRootMotionValid = false;
+
+    // ルートモーションの重み用の変数
+    float rootMotionTotalWeight = 0.0f;
+
+    for (size_t i = 0; i < weights.size(); i++)
     {
-        width = (std::max)(100.0f, ImGui::GetContentRegionAvail().x - 10.0f);
-        ImDrawList* curveDrawList = ImGui::GetWindowDrawList();
-        const ImVec2 curvePos = ImGui::GetCursorScreenPos();
-        DrawCurveEditor(asset, duration, width, height, curveDrawList, curvePos);
-        ImGui::Dummy(ImVec2(width, 210.0f));
+        size_t clip = weights[i].clip;
+
+        // clip ごとの delta をローカル変数へ入れる
+        DirectX::XMFLOAT3 clipRootMotionDelta =
+        {
+            0.0f, 0.0f, 0.0f
+        };
+        bool clipRootMotionValid = false;
+
+        if (cycleDuration <= FLT_EPSILON || clip >= target->model->animations.size())
+        {
+            return;
+        }
+
+        const float clipDuration = target->model->animations[clip].duration;
+        if (!std::isfinite(clipDuration) || clipDuration <= FLT_EPSILON)
+        {
+            return;
+        }
+
+        const float phaseOffset = BlendSpace::WrapPhase(weights[i].phaseOffset);
+        const float previousSamplePhase = BlendSpace::WrapPhase(previousLocomotionPhase + phaseOffset);
+        const float samplePhase = BlendSpace::WrapPhase(currentLocomotionPhase + phaseOffset);
+        const float previousTime = previousSamplePhase * clipDuration;
+        const float sampleTime = samplePhase * clipDuration;
+
+        target->model->Animate(clip, sampleTime, blendSpacePoses[i]);
+        if (!canExtractRootMotion)
+        {
+            continue;
+        }
+
+        // 前回時刻のRootMotion 取得用Pose
+        target->model->Animate(clip, previousTime, previousBlendSpaceRootMotionNodes);
+
+        // 前回と今回のroot位置を取得する
+        const auto& previousRootNode = previousBlendSpaceRootMotionNodes[rootNodeIndex];
+        const auto& currentRootNode = blendSpacePoses[i][rootNodeIndex];
+        // 位置を取り出す
+        DirectX::XMFLOAT3 previousRootPosition =
+        {
+            previousRootNode.globalTransform._41,
+            previousRootNode.globalTransform._42,
+            previousRootNode.globalTransform._43
+        };
+
+        DirectX::XMFLOAT3 currentRootPosition =
+        {
+            currentRootNode.globalTransform._41,
+            currentRootNode.globalTransform._42,
+            currentRootNode.globalTransform._43
+        };
+
+        // ループしていないフレームのみ
+        if (previousSamplePhase <= samplePhase)
+        {
+            clipRootMotionDelta =
+            {
+                currentRootPosition.x - previousRootPosition.x,
+                currentRootPosition.y - previousRootPosition.y,
+                currentRootPosition.z - previousRootPosition.z
+            };
+            clipRootMotionValid = true;
+        }
+        // 1.0 → 0.0をまたいだループフレーム
+        else
+        {
+            // clip先頭のPoseを評価
+            target->model->Animate(clip, 0.0f, blendSpaceRootMotionStartNodes);
+            // clip末尾のPoseを評価
+            target->model->Animate(clip, clipDuration, blendSpaceRootMotionEndNodes);
+
+            const auto& startRootNode = blendSpaceRootMotionStartNodes[rootNodeIndex];
+            const auto& endRootNode = blendSpaceRootMotionEndNodes[rootNodeIndex];
+
+            DirectX::XMFLOAT3 startRootPosition =
+            {
+                startRootNode.globalTransform._41,
+                startRootNode.globalTransform._42,
+                startRootNode.globalTransform._43
+            };
+
+            DirectX::XMFLOAT3 endRootPosition =
+            {
+                endRootNode.globalTransform._41,
+                endRootNode.globalTransform._42,
+                endRootNode.globalTransform._43
+            };
+
+            // previous位置からclip末尾まで
+            DirectX::XMFLOAT3 deltaToEnd =
+            {
+                endRootPosition.x - previousRootPosition.x,
+                endRootPosition.y - previousRootPosition.y,
+                endRootPosition.z - previousRootPosition.z
+            };
+
+            // clip先頭からcurrent位置まで
+            DirectX::XMFLOAT3 deltaFromStart =
+            {
+                currentRootPosition.x - startRootPosition.x,
+                currentRootPosition.y - startRootPosition.y,
+                currentRootPosition.z - startRootPosition.z
+            };
+
+            clipRootMotionDelta =
+            {
+                deltaToEnd.x + deltaFromStart.x,
+                deltaToEnd.y + deltaFromStart.y,
+                deltaToEnd.z + deltaFromStart.z
+            };
+
+            clipRootMotionValid = true;
+        }
+
+        // 各クリップごとの重み付きのRootMotionを加算
+        if (clipRootMotionValid)
+        {
+            const float weight = weights[i].weight;
+            blendSpaceRootMotionDelta.x += clipRootMotionDelta.x * weight;
+            blendSpaceRootMotionDelta.y += clipRootMotionDelta.y * weight;
+            blendSpaceRootMotionDelta.z += clipRootMotionDelta.z * weight;
+            rootMotionTotalWeight += weight;
+        }
     }
 
-    ImGui::NextColumn();
-    ImGui::BeginChild("NotifyInspector", ImVec2(0, 0), true);
-    DrawNotifyInspector(asset);
-    ImGui::EndChild();
+    if (rootMotionTotalWeight > FLT_EPSILON)
+    {
+        const float inverseWeight = 1.0f / rootMotionTotalWeight;
 
-    ImGui::Columns(1);
-    ImGui::End();
-#endif
+        blendSpaceRootMotionDelta.x *= inverseWeight;
+        blendSpaceRootMotionDelta.y *= inverseWeight;
+        blendSpaceRootMotionDelta.z *= inverseWeight;
+        blendSpaceRootMotionValid = true;
+    }
+    BlendResult blend;
+    blend.count = 0;
+    for (auto& w : weights)
+    {
+        blend.samples[blend.count].clip = w.clip;
+        blend.samples[blend.count].weight = w.weight;
+        blend.count++;
+    }
+
+    target->model->BlendAnimations(blendSpacePoses, blend, blendSpaceNodes);
+
+    if (blend.count > 0)
+    {
+        target->model->CumulateTransforms(blendSpaceNodes);
+    }
+
+    // BlendSpaceへの遷移
+    if (blendSpaceTransition)
+    {
+        blendSpaceElapsed += deltaTime;
+
+        constexpr float blendSpaceTransitionTime = 0.2f;
+        float t = std::clamp(blendSpaceElapsed / blendSpaceTransitionTime, 0.0f, 1.0f);
+        target->model->BlendAnimations(animationNodes[Origin], blendSpaceNodes, t, finalNodes);
+        if (t >= 1.0f)
+        {
+            blendSpaceTransition = false;
+        }
+    }
+    else
+    {
+        finalNodes = blendSpaceNodes;
+    }
+
+    // 今回Phaseを次フレームの前回phaseにする
+    previousLocomotionPhase = currentLocomotionPhase;
+    if (std::isfinite(cycleDuration) && cycleDuration > FLT_EPSILON)
+    {
+        locomotionTime = currentLocomotionPhase * cycleDuration;
+    }
+    else
+    {
+        locomotionTime = 0.0f;
+    }
+}
+// それぞれのアニメーション再生時間を取る
+float AnimationController::GetLocomotionDuration()
+{
+    return target->model->animations[animationNameToIndex["Jog_Fwd"]].duration;
 }
 void AnimationController::OnNotifyBegin(const AnimationNotifyState& state)
 {
@@ -1253,365 +1438,29 @@ void AnimationController::ApplyLocalPoseOverride()
 
     target->model->CumulateTransforms(finalNodes);
 }
-// それぞれのアニメーション再生時間を取る
-float AnimationController::GetLocomotionDuration()
+
+bool AnimationController::IsVisualPoseLatchValid() const
 {
-    return target->model->animations[animationNameToIndex["Jog_Fwd"]].duration;
+    if (!visualPoseLatchActive || visualPoseLatchNodes.empty() || visualPoseLatchTargets.size() != extraTargets.size() + 1) return false;
+    const auto isTargetValid = [this](const VisualPoseLatchTarget& latchTarget, SkeletalMeshComponent* expectedTarget)
+    { return expectedTarget && expectedTarget->model && latchTarget.target == expectedTarget && latchTarget.model == expectedTarget->model.get() && latchTarget.nodeCount == visualPoseLatchNodes.size() && expectedTarget->model->GetNodes().size() == latchTarget.nodeCount; };
+    if (!isTargetValid(visualPoseLatchTargets.front(), target)) return false;
+    for (size_t index = 0; index < extraTargets.size(); ++index) if (!isTargetValid(visualPoseLatchTargets[index + 1], extraTargets[index])) return false;
+    return true;
 }
-// ブレンドスペースを更新する
-void AnimationController::UpdateBlendSpace(const float deltaTime)
+const std::vector<InterleavedGltfModel::Node>& AnimationController::GetRuntimeVisualPoseNodes()
 {
-    // デバッグ固定方向はPose評価だけに使用し、Playerの移動入力は変更しない。
-    DirectX::XMFLOAT2 evaluationInput = blendInput;
+    if (visualPoseLatchActive && !IsVisualPoseLatchValid()) { visualPoseLatchActive = false; visualPoseLatchNodes.clear(); visualPoseLatchTargets.clear(); }
+    return visualPoseLatchActive ? visualPoseLatchNodes : finalNodes;
+}
 
-    locomotionDebugEvaluationAngle = DirectX::XMConvertToDegrees(
-        atan2f(evaluationInput.x, evaluationInput.y));
-
-    // 旧Forward/Backwardグループは保持するが、Locomotion更新では使用しない。
-    std::vector<BlendSpace::BlendResult> weights =
-        locomotionBlendSpace.CalculateWeights(evaluationInput);
-
-    // 90度ではSide 100%、180度ではBackward 100%を維持する。
-    // 90度直後の短い遷移帯で連続的にSide上限へ収束させる。
-    const float absoluteEvaluationAngle =
-        std::fabs(locomotionDebugEvaluationAngle);
-    if (absoluteEvaluationAngle >= 90.0f &&
-        absoluteEvaluationAngle <= 180.0f &&
-        weights.size() == 2)
-    {
-        const auto backwardIt = animationNameToIndex.find("Jog_Bwd");
-        if (backwardIt != animationNameToIndex.end())
-        {
-            size_t backwardWeightIndex = weights.size();
-            for (size_t i = 0; i < weights.size(); ++i)
-            {
-                if (weights[i].clip == backwardIt->second)
-                {
-                    backwardWeightIndex = i;
-                    break;
-                }
-            }
-
-            if (backwardWeightIndex < weights.size())
-            {
-                const size_t sideWeightIndex = 1 - backwardWeightIndex;
-                const float sideMaxWeight = std::clamp(
-                    locomotionBackwardSideMaxWeight, 0.0f, 0.5f);
-                const float originalSideWeight =
-                    weights[sideWeightIndex].weight;
-                const float cappedSideWeight =
-                    originalSideWeight < sideMaxWeight
-                    ? originalSideWeight
-                    : sideMaxWeight;
-
-                constexpr float TransitionAngle = 22.5f;
-                float transition = std::clamp(
-                    (absoluteEvaluationAngle - 90.0f) / TransitionAngle,
-                    0.0f,
-                    1.0f);
-                transition = transition * transition * (3.0f - 2.0f * transition);
-
-                const float adjustedSideWeight = std::lerp(
-                    originalSideWeight,
-                    cappedSideWeight,
-                    transition);
-                weights[sideWeightIndex].weight = adjustedSideWeight;
-                weights[backwardWeightIndex].weight = 1.0f - adjustedSideWeight;
-            }
-        }
-    }
-
-    if (weights.size() == 2)
-    {
-        const auto bwdIt = animationNameToIndex.find("Jog_Bwd");
-        if (bwdIt != animationNameToIndex.end())
-        {
-            for (size_t i = 0; i < weights.size(); ++i)
-            {
-                if (weights[i].clip == bwdIt->second)
-                {
-                    const float bwdWeight = std::clamp(locomotionDebugBwdWeight, 0.0f, 1.0f);
-                    weights[i].weight = bwdWeight;
-                    weights[1 - i].weight = 1.0f - bwdWeight;
-                    break;
-                }
-            }
-        }
-    }
-    if (weights.empty())
-    {
-        blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };
-        blendSpaceRootMotionValid = false;
-        resetLocomotionRootMotion = true;
-        return;
-    }
-
-    if (weights.size() > blendSpacePoses.size())
-    {
-        Logger::Error("BlendSpace weights exceeded pose capacity.");
-        blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };
-        blendSpaceRootMotionValid = false;
-        resetLocomotionRootMotion = true;
-        return;
-    }
-
-    // Jog_Fwdを共通Locomotion cycleの基準durationとして使用する。
-    const float cycleDuration = GetLocomotionDuration();
-    // 前回phaseと今回phaseを確定する
-    float currentLocomotionPhase = 0.0f;
-    if (std::isfinite(locomotionTime) &&
-        std::isfinite(cycleDuration) &&
-        cycleDuration > FLT_EPSILON)
-    {
-        currentLocomotionPhase = locomotionTime / cycleDuration;
-        currentLocomotionPhase = BlendSpace::WrapPhase(currentLocomotionPhase);
-    }
-
-    bool canExtractRootMotion = enableRootMotion && !ignoreRootMotion;
-
-    if (resetLocomotionRootMotion)
-    {
-        previousLocomotionPhase = currentLocomotionPhase;
-        resetLocomotionRootMotion = false;
-        blendSpaceRootMotionValid = false;
-        blendSpaceRootMotionDelta = { 0.0f,0.0f,0.0f };
-
-        canExtractRootMotion = false;
-    }
-
-    const auto notifyClipIt = animationNameToIndex.find("Jog_Fwd");
-    if (notifyClipIt != animationNameToIndex.end())
-    {
-        const auto notifyAssetIt = animationNotifyAssets.find(notifyClipIt->second);
-        if (notifyAssetIt != animationNotifyAssets.end())
-        {
-            const float previousNotifyTime = previousLocomotionPhase * cycleDuration;
-            const float currentNotifyTime = currentLocomotionPhase * cycleDuration;
-            const bool wrapped = previousLocomotionPhase > currentLocomotionPhase;
-
-            for (const AnimationNotifyEvent& event : notifyAssetIt->second.notifyTrack.events)
-            {
-                const bool crossed = wrapped
-                    ? ((previousNotifyTime < event.time && event.time <= cycleDuration) ||
-                        (0.0f < event.time && event.time <= currentNotifyTime))
-                    : (previousNotifyTime < event.time && event.time <= currentNotifyTime);
-
-                if (crossed)
-                {
-                    OnNotifyEvent(event);
-                }
-            }
-        }
-    }
-
-    blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };
-    blendSpaceRootMotionValid = false;
-
-    // ルートモーションの重み用の変数
-    float rootMotionTotalWeight = 0.0f;
-
-    for (size_t i = 0; i < weights.size(); i++)
-    {
-        size_t clip = weights[i].clip;
-
-        // clip ごとの delta をローカル変数へ入れる
-        DirectX::XMFLOAT3 clipRootMotionDelta =
-        {
-            0.0f, 0.0f, 0.0f
-        };
-        bool clipRootMotionValid = false;
-
-        if (cycleDuration <= FLT_EPSILON ||
-            clip >= target->model->animations.size())
-        {
-            return;
-        }
-
-        const float clipDuration = target->model->animations[clip].duration;
-        if (!std::isfinite(clipDuration) || clipDuration <= FLT_EPSILON)
-        {
-            return;
-        }
-
-        const float phaseOffset = BlendSpace::WrapPhase(weights[i].phaseOffset);
-        const float previousSamplePhase =
-            BlendSpace::WrapPhase(previousLocomotionPhase + phaseOffset);
-        const float samplePhase =
-            BlendSpace::WrapPhase(currentLocomotionPhase + phaseOffset);
-        const float previousTime = previousSamplePhase * clipDuration;
-        const float sampleTime = samplePhase * clipDuration;
-
-        target->model->Animate(clip, sampleTime, blendSpacePoses[i]);
-
-
-        if (!canExtractRootMotion)
-        {
-            continue;
-        }
-
-        // 前回時刻のRootMotion 取得用Pose
-        target->model->Animate(clip, previousTime, previousBlendSpaceRootMotionNodes);
-
-        // 前回と今回のroot位置を取得する
-        const auto& previousRootNode = previousBlendSpaceRootMotionNodes[rootNodeIndex];
-        const auto& currentRootNode = blendSpacePoses[i][rootNodeIndex];
-        // 位置を取り出す
-        DirectX::XMFLOAT3 previousRootPosition =
-        {
-            previousRootNode.globalTransform._41,
-            previousRootNode.globalTransform._42,
-            previousRootNode.globalTransform._43
-        };
-
-        DirectX::XMFLOAT3 currentRootPosition =
-        {
-            currentRootNode.globalTransform._41,
-            currentRootNode.globalTransform._42,
-            currentRootNode.globalTransform._43
-        };
-
-        // ループしていないフレームのみ
-        if (previousSamplePhase <= samplePhase)
-        {
-            clipRootMotionDelta =
-            {
-                currentRootPosition.x - previousRootPosition.x,
-                currentRootPosition.y - previousRootPosition.y,
-                currentRootPosition.z - previousRootPosition.z
-            };
-            clipRootMotionValid = true;
-        }
-        // 1.0 → 0.0をまたいだループフレーム
-        else
-        {
-            // clip先頭のPoseを評価
-            target->model->Animate(clip, 0.0f, blendSpaceRootMotionStartNodes);
-
-            // clip末尾のPoseを評価
-            target->model->Animate(clip, clipDuration, blendSpaceRootMotionEndNodes);
-
-            const auto& startRootNode = blendSpaceRootMotionStartNodes[rootNodeIndex];
-            const auto& endRootNode = blendSpaceRootMotionEndNodes[rootNodeIndex];
-
-            DirectX::XMFLOAT3 startRootPosition =
-            {
-                startRootNode.globalTransform._41,
-                startRootNode.globalTransform._42,
-                startRootNode.globalTransform._43
-            };
-
-            DirectX::XMFLOAT3 endRootPosition =
-            {
-                endRootNode.globalTransform._41,
-                endRootNode.globalTransform._42,
-                endRootNode.globalTransform._43
-            };
-
-            // previous位置からclip末尾まで
-            DirectX::XMFLOAT3 deltaToEnd =
-            {
-                endRootPosition.x - previousRootPosition.x,
-                endRootPosition.y - previousRootPosition.y,
-                endRootPosition.z - previousRootPosition.z
-            };
-
-            // clip先頭からcurrent位置まで
-            DirectX::XMFLOAT3 deltaFromStart =
-            {
-                currentRootPosition.x - startRootPosition.x,
-                currentRootPosition.y - startRootPosition.y,
-                currentRootPosition.z - startRootPosition.z
-            };
-
-            clipRootMotionDelta =
-            {
-                deltaToEnd.x + deltaFromStart.x,
-                deltaToEnd.y + deltaFromStart.y,
-                deltaToEnd.z + deltaFromStart.z
-            };
-
-            clipRootMotionValid = true;
-
-        }
-
-        // 各クリップごとの重み付きのRootMotionを加算
-        if (clipRootMotionValid)
-        {
-            const float weight = weights[i].weight;
-            blendSpaceRootMotionDelta.x += clipRootMotionDelta.x * weight;
-            blendSpaceRootMotionDelta.y += clipRootMotionDelta.y * weight;
-            blendSpaceRootMotionDelta.z += clipRootMotionDelta.z * weight;
-            rootMotionTotalWeight += weight;
-        }
-
-    }
-
-    if (rootMotionTotalWeight > FLT_EPSILON)
-    {
-        const float inverseWeight = 1.0f / rootMotionTotalWeight;
-
-        blendSpaceRootMotionDelta.x *= inverseWeight;
-        blendSpaceRootMotionDelta.y *= inverseWeight;
-        blendSpaceRootMotionDelta.z *= inverseWeight;
-
-        blendSpaceRootMotionValid = true;
-    }
-
-
-
-    BlendResult blend;
-    blend.count = 0;
-
-    for (auto& w : weights)
-    {
-        blend.samples[blend.count].clip = w.clip;
-        blend.samples[blend.count].weight = w.weight;
-        blend.count++;
-    }
-
-
-    target->model->BlendAnimations(blendSpacePoses, blend, blendSpaceNodes);
-
-    if (blend.count > 0)
-    {
-        target->model->CumulateTransforms(blendSpaceNodes);
-    }
-
-    // BlendSpaceへの遷移
-    if (blendSpaceTransition)
-    {
-        blendSpaceElapsed += deltaTime;
-
-        float t = std::clamp(blendSpaceElapsed / blendSpaceTransitionTime,
-            0.0f,
-            1.0f);
-
-        target->model->BlendAnimations(
-            animationNodes[Origin],
-            blendSpaceNodes,
-            t,
-            finalNodes);
-
-        if (t >= 1.0f)
-        {
-            blendSpaceTransition = false;
-        }
-    }
-    else
-    {
-        finalNodes = blendSpaceNodes;
-    }
-
-    // 今回Phaseを次フレームの前回phaseにする
-    previousLocomotionPhase = currentLocomotionPhase;
-    if (std::isfinite(cycleDuration) && cycleDuration > FLT_EPSILON)
-    {
-        locomotionTime = currentLocomotionPhase * cycleDuration;
-    }
-    else
-    {
-        locomotionTime = 0.0f;
-    }
+void AnimationController::ApplyRuntimeVisualPose()
+{
+    if (!target) return;
+    const auto& visualPoseNodes = GetRuntimeVisualPoseNodes();
+    target->SetModelNodes(visualPoseNodes);
+    target->UpdateChildTransforms(UpdateTransformFlags::None);
+    for (auto* extraTarget : extraTargets) { extraTarget->SetModelNodes(visualPoseNodes); extraTarget->UpdateChildTransforms(UpdateTransformFlags::None); }
 }
 // NotifyAssetを保存する
 void AnimationController::SaveNotifyAsset(const std::string& filename, const AnimationNotifyAsset& asset)
@@ -1689,7 +1538,6 @@ void AnimationController::SaveNotifyAsset(const std::string& filename, const Ani
 
     ofs << root.dump(4);
 }
-
 // NotifyAssetをロードする
 void AnimationController::LoadNotifyAsset(const std::string& filename, AnimationNotifyAsset& asset)
 {
@@ -1831,40 +1679,110 @@ void AnimationController::LoadNotifyAsset(const std::string& filename, Animation
             return a.time < b.time;
         });
 }
-// イベントを追加する
-void AnimationController::AddEvent(AnimationNotifyTrack& track, const AnimationNotifyEvent::Type type, float time)
+
+void AnimationController::DrawTimeline()
 {
-    AnimationNotifyEvent event;
-    event.time = popupCreateTime;
-    event.type = type;
-    track.events.push_back(event);
-    std::sort(
-        track.events.begin(),
-        track.events.end(),
-        [](const AnimationNotifyEvent& a, const AnimationNotifyEvent& b)
+#ifdef USE_IMGUI
+    ImGui::Begin("Animation Sequence");
+
+    const float availableWidth = ImGui::GetContentRegionAvail().x;
+    const float listWidth = std::clamp(availableWidth * 0.16f, 180.0f, 260.0f);
+    const float inspectorWidth = std::clamp(availableWidth * 0.21f, 220.0f, 320.0f);
+    const float editorWidth = (std::max)(320.0f, availableWidth - listWidth - inspectorWidth);
+
+    ImGui::Columns(3);
+    ImGui::SetColumnWidth(0, listWidth);
+    ImGui::SetColumnWidth(1, editorWidth);
+
+    const float animationListHeight = ImGui::GetContentRegionAvail().y;
+    ImGui::BeginChild(U8("アニメーションリスト"), ImVec2(0, animationListHeight), true);
+
+    for (auto clip : animationAssetOrder)
+    {
+        auto& listedAsset = animationNotifyAssets[clip];
+        const bool selected = selectedTimelineClip == clip;
+        if (ImGui::Selectable(listedAsset.animationName.c_str(), selected))
         {
-            return a.time < b.time;
-        });
+            EndAllEditorPreviewStates();
+            selectedTimelineClip = clip;
+            const std::string filename = "./Data/Animation/" + ownerName + "/" + listedAsset.animationName + ".json";
+            LoadNotifyAsset(filename, listedAsset);
+            editorPreviewTime = 0.0f;
+            BeginEditorPreview(false, true);
+            selectedStateIndex = -1;
+            selectedEventIndex = -1;
+            popupCreateTime = 0.0f;
+            selectedCurveKey = -1;
+            curveCreateTime = 0.0f;
+            curveCreateValue = 1.0f;
+        }
+    }
+    ImGui::EndChild();
 
-}
-// ステートを追加する
-void AnimationController::AddState(AnimationNotifyTrack& track, const AnimationNotifyState::Type type, float startTime)
-{
-    AnimationNotifyState state;
+    ImGui::NextColumn();
+    auto it = animationNotifyAssets.find(selectedTimelineClip);
+    if (it == animationNotifyAssets.end())
+    {
+        ImGui::Columns(1);
+        ImGui::End();
+        return;
+    }
 
-    state.startTime = popupCreateTime;
-    state.endTime = popupCreateTime + 0.2f;
-    state.type = type;
+    auto& asset = it->second;
+    const float duration = target->model->animations[asset.animationClip].duration;
+    const float trackHeight = 20.0f;
+    const float labelWidth = 100.0f;
+    const float handleSize = 40.0f;
+    const float height = 30.0f;
 
-    track.states.push_back(state);
+    DrawAnimationSettings(asset, duration);
 
-    std::sort(
-        track.states.begin(),
-        track.states.end(),
-        [](const AnimationNotifyState& a, const AnimationNotifyState& b)
+    float width = (std::max)(100.0f, ImGui::GetContentRegionAvail().x - labelWidth - 10.0f);
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    ImVec2 timelinePos = ImGui::GetCursorScreenPos();
+    DrawStateTimeline(asset, duration, width, height, labelWidth, trackHeight, handleSize, drawList, timelinePos);
+    ImGui::Dummy(ImVec2(0, 6.0f));
+    DrawEventTimeline(asset, duration, width, labelWidth, trackHeight, drawList);
+
+    if (ImGui::IsKeyPressed(ImGuiKey_Delete))
+    {
+        if (selectedStateIndex >= 0)
         {
-            return a.startTime < b.startTime;
-        });
+            if (selectedStateIndex < static_cast<int>(asset.notifyTrack.states.size()))
+            {
+                EndAllEditorPreviewStates();
+                asset.notifyTrack.states.erase(asset.notifyTrack.states.begin() + selectedStateIndex);
+            }
+            selectedStateIndex = -1;
+        }
+
+        if (selectedEventIndex >= 0)
+        {
+            if (selectedEventIndex < static_cast<int>(asset.notifyTrack.events.size()))
+                asset.notifyTrack.events.erase(asset.notifyTrack.events.begin() + selectedEventIndex);
+            selectedEventIndex = -1;
+        }
+    }
+
+    const std::string curveHeader = "Animation Curve [" + std::to_string(asset.speedCurve.keys.size()) + " Keys]###SpeedCurveHeader";
+    ImGui::SetNextItemOpen(false, ImGuiCond_Once);
+    if (ImGui::CollapsingHeader(curveHeader.c_str()))
+    {
+        width = (std::max)(100.0f, ImGui::GetContentRegionAvail().x - 10.0f);
+        ImDrawList* curveDrawList = ImGui::GetWindowDrawList();
+        const ImVec2 curvePos = ImGui::GetCursorScreenPos();
+        DrawCurveEditor(asset, duration, width, height, curveDrawList, curvePos);
+        ImGui::Dummy(ImVec2(width, 210.0f));
+    }
+
+    ImGui::NextColumn();
+    ImGui::BeginChild("NotifyInspector", ImVec2(0, 0), true);
+    DrawNotifyInspector(asset);
+    ImGui::EndChild();
+
+    ImGui::Columns(1);
+    ImGui::End();
+#endif
 }
 
 void AnimationController::DrawAnimationSettings(AnimationNotifyAsset& asset, const float duration)
@@ -1956,6 +1874,7 @@ void AnimationController::DrawAnimationSettings(AnimationNotifyAsset& asset, con
     }
 }
 
+
 // タイムラインステート設定のImGui描画
 void AnimationController::DrawStateTimeline(AnimationNotifyAsset& asset, const float duration, const float width, const float height, const float labelWidth, const float trackHeight, const float handleSize, ImDrawList* drawList, const ImVec2 timelinePos)
 {
@@ -1969,12 +1888,7 @@ void AnimationController::DrawStateTimeline(AnimationNotifyAsset& asset, const f
         SetEditorPreviewTime(normalized * duration);
     }
 
-    drawList->AddRectFilled(
-        timelinePos,
-        ImVec2(
-            timelinePos.x + width,
-            timelinePos.y + height),
-        IM_COL32(60, 60, 60, 255));
+    drawList->AddRectFilled(timelinePos, ImVec2(timelinePos.x + width, timelinePos.y + height), IM_COL32(60, 60, 60, 255));
 
     for (int stateIndex = 0; stateIndex < asset.notifyTrack.states.size(); stateIndex++)
     {
@@ -2039,8 +1953,8 @@ void AnimationController::DrawStateTimeline(AnimationNotifyAsset& asset, const f
         {
             char id[64];
             sprintf_s(id,
-                "Left_%d",
-                stateIndex);
+                      "Left_%d",
+                      stateIndex);
 
             ImGui::SetCursorScreenPos(
                 ImVec2(
@@ -2077,8 +1991,8 @@ void AnimationController::DrawStateTimeline(AnimationNotifyAsset& asset, const f
         {
             char id[64];
             sprintf_s(id,
-                "Right_%d",
-                stateIndex);
+                      "Right_%d",
+                      stateIndex);
 
             ImGui::SetCursorScreenPos(
                 ImVec2(
@@ -2162,7 +2076,6 @@ void AnimationController::DrawStateTimeline(AnimationNotifyAsset& asset, const f
                 255));
     }
 }
-
 
 // タイムラインイベント設定のImGui描画
 void AnimationController::DrawEventTimeline(AnimationNotifyAsset& asset, const float duration, const float width, const float labelWidth, const float trackHeight, ImDrawList* drawList)
@@ -2454,18 +2367,18 @@ void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
         switch (state.type)
         {
         case AnimationNotifyState::Type::HitBox:
-        {
-            char buffer[128];
-            strcpy_s(buffer, state.parameter.c_str());
-            if (ImGui::InputText("Weapon", buffer, sizeof(buffer)))
             {
-                state.parameter = buffer;
+                char buffer[128];
+                strcpy_s(buffer, state.parameter.c_str());
+                if (ImGui::InputText("Weapon", buffer, sizeof(buffer)))
+                {
+                    state.parameter = buffer;
+                }
+                if (ImGui::DragFloat("HitBox Radius", &state.hitBoxRadius, 0.01f, 0.01f, 5.0f))
+                    state.hitBoxRadius = (state.hitBoxRadius < 0.01f ? 0.01f : state.hitBoxRadius);
+                ImGui::DragFloat3(U8("HitBox Offset"), &state.hitBoxOffset.x, 0.01f, -5.0f, 5.0f);
+                break;
             }
-            if (ImGui::DragFloat("HitBox Radius", &state.hitBoxRadius, 0.01f, 0.01f, 5.0f))
-                state.hitBoxRadius = (state.hitBoxRadius < 0.01f ? 0.01f : state.hitBoxRadius);
-            ImGui::DragFloat3(U8("HitBox Offset"), &state.hitBoxOffset.x, 0.01f, -5.0f, 5.0f);
-            break;
-        }
         case AnimationNotifyState::Type::InputWindow:
             break;
         case AnimationNotifyState::Type::Invincible:
@@ -2480,10 +2393,10 @@ void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
             if (owner)
             {
                 const DangerArea previewArea = BuildDangerArea(owner->GetPosition(),
-                    owner->GetRight(), owner->GetUp(), owner->GetForward(),
-                    state.justDodgeAreaOffset, state.justDodgeAreaSize);
+                                                               owner->GetRight(), owner->GetUp(), owner->GetForward(),
+                                                               state.justDodgeAreaOffset, state.justDodgeAreaSize);
                 DebugRender::DrawBox(previewArea.WorldTransform(), previewArea.size,
-                    { 1,1,1,1 }, 0.0f, true);
+                                     { 1,1,1,1 }, 0.0f, true);
             }
             break;
         case AnimationNotifyState::Type::ShowTrail:
@@ -2513,53 +2426,53 @@ void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
         switch (event.type)
         {
         case AnimationNotifyEvent::Type::PlaySE:
-        {
-            char buffer[128];
-            strcpy_s(buffer, event.parameter.c_str());
-            if (ImGui::InputText("Sound", buffer, sizeof(buffer)))
             {
-                event.parameter = buffer;
+                char buffer[128];
+                strcpy_s(buffer, event.parameter.c_str());
+                if (ImGui::InputText("Sound", buffer, sizeof(buffer)))
+                {
+                    event.parameter = buffer;
+                }
+                ImGui::DragFloat("Volume", &event.value, 0.01f, 0, 1);
+                break;
             }
-            ImGui::DragFloat("Volume", &event.value, 0.01f, 0, 1);
-            break;
-        }
         case AnimationNotifyEvent::Type::SpawnEffect:
-        {
-            char buffer[128];
-            strcpy_s(buffer, event.parameter.c_str());
-            if (ImGui::InputText("EffectName", buffer, sizeof(buffer)))
             {
-                event.parameter = buffer;
+                char buffer[128];
+                strcpy_s(buffer, event.parameter.c_str());
+                if (ImGui::InputText("EffectName", buffer, sizeof(buffer)))
+                {
+                    event.parameter = buffer;
+                }
+                break;
             }
-            break;
-        }
         case AnimationNotifyEvent::Type::CameraShake:
-        {
-            char buffer[128];
-            strcpy_s(buffer, event.parameter.c_str());
-            if (ImGui::InputText("Preset", buffer, sizeof(buffer)))
             {
-                event.parameter = buffer;
+                char buffer[128];
+                strcpy_s(buffer, event.parameter.c_str());
+                if (ImGui::InputText("Preset", buffer, sizeof(buffer)))
+                {
+                    event.parameter = buffer;
+                }
+                break;
             }
-            break;
-        }
         case AnimationNotifyEvent::Type::ControllerRumble:
-        {
-            ImGui::DragFloat("Left Motor Strength", &event.leftMotorStrength, 0.01f, 0.0f, 1.0f);
-            ImGui::DragFloat("Right Motor Strength", &event.rightMotorStrength, 0.01f, 0.0f, 1.0f);
-            ImGui::DragFloat("Duration", &event.duration, 0.01f, 0.0f);
-            break;
-        }
-        case AnimationNotifyEvent::Type::GameplayEvent:
-        {
-            char buffer[128];
-            strcpy_s(buffer, event.parameter.c_str());
-            if (ImGui::InputText("Parameter", buffer, sizeof(buffer)))
             {
-                event.parameter = buffer;
+                ImGui::DragFloat("Left Motor Strength", &event.leftMotorStrength, 0.01f, 0.0f, 1.0f);
+                ImGui::DragFloat("Right Motor Strength", &event.rightMotorStrength, 0.01f, 0.0f, 1.0f);
+                ImGui::DragFloat("Duration", &event.duration, 0.01f, 0.0f);
+                break;
             }
-            break;
-        }
+        case AnimationNotifyEvent::Type::GameplayEvent:
+            {
+                char buffer[128];
+                strcpy_s(buffer, event.parameter.c_str());
+                if (ImGui::InputText("Parameter", buffer, sizeof(buffer)))
+                {
+                    event.parameter = buffer;
+                }
+                break;
+            }
         }
     }
 
@@ -2577,7 +2490,7 @@ void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
             editedKey.value = std::clamp(editedKey.value, 0.0f, 3.0f);
             asset.speedCurve.keys[selectedCurveKey] = editedKey;
             std::sort(asset.speedCurve.keys.begin(), asset.speedCurve.keys.end(),
-                [](const CurveKey& a, const CurveKey& b) { return a.time < b.time; });
+                      [](const CurveKey& a, const CurveKey& b) { return a.time < b.time; });
             for (int i = 0; i < static_cast<int>(asset.speedCurve.keys.size()); ++i)
             {
                 if (asset.speedCurve.keys[i].time == editedKey.time &&
@@ -2591,6 +2504,80 @@ void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
     }
 }
 
+// イベントを追加する
+void AnimationController::AddEvent(AnimationNotifyTrack& track, const AnimationNotifyEvent::Type type, float time)
+{
+    AnimationNotifyEvent event;
+    event.time = popupCreateTime;
+    event.type = type;
+    track.events.push_back(event);
+    std::sort(
+        track.events.begin(),
+        track.events.end(),
+        [](const AnimationNotifyEvent& a, const AnimationNotifyEvent& b)
+        {
+            return a.time < b.time;
+        });
+
+}
+
+// ステートを追加する
+void AnimationController::AddState(AnimationNotifyTrack& track, const AnimationNotifyState::Type type, float startTime)
+{
+    AnimationNotifyState state;
+
+    state.startTime = popupCreateTime;
+    state.endTime = popupCreateTime + 0.2f;
+    state.type = type;
+
+    track.states.push_back(state);
+
+    std::sort(
+        track.states.begin(),
+        track.states.end(),
+        [](const AnimationNotifyState& a, const AnimationNotifyState& b)
+        {
+            return a.startTime < b.startTime;
+        });
+}
+
+void AnimationController::BeginEditorPreview(const bool playing, const bool resetTime)
+{
+    ReleaseLatchedVisualPose();
+
+    if (!editorPreviewActive)
+        CaptureEditorRuntimeSnapshot();
+
+    editorPreviewActive = true;
+    editorPreviewPlaying = playing;
+    if (resetTime)
+    {
+        InputSystem::StopRumble();
+        EndAllEditorPreviewStates();
+        editorPreviewTime = 0.0f;
+    }
+    previousEditorPreviewTime = editorPreviewTime;
+    if (playing)
+        SyncEditorPreviewStates(editorPreviewTime);
+    ApplyEditorPreviewPose();
+}
+
+
+void AnimationController::SetEditorPreviewTime(const float time)
+{
+    ReleaseLatchedVisualPose();
+
+    if (!target || !target->model || selectedTimelineClip >= target->model->animations.size())
+        return;
+
+    editorPreviewActive = true;
+    editorPreviewPlaying = false;
+    const float duration = target->model->animations[selectedTimelineClip].duration;
+    editorPreviewTime = std::clamp(time, 0.0f, duration);
+    SyncEditorPreviewStates(editorPreviewTime);
+    previousEditorPreviewTime = editorPreviewTime;
+    ApplyEditorPreviewPose();
+}
 void AnimationController::UpdateEditorPreview(const float deltaTime)
 {
     if (selectedTimelineClip >= target->model->animations.size())
@@ -2600,10 +2587,8 @@ void AnimationController::UpdateEditorPreview(const float deltaTime)
     if (editorPreviewPlaying && duration > FLT_EPSILON)
     {
         const auto assetIt = animationNotifyAssets.find(selectedTimelineClip);
-        const float curveRate = assetIt != animationNotifyAssets.end()
-            ? assetIt->second.speedCurve.Evaluate(editorPreviewTime) : 1.0f;
-        const float playRate = assetIt != animationNotifyAssets.end()
-            ? assetIt->second.playRate : 1.0f;
+        const float curveRate = assetIt != animationNotifyAssets.end()? assetIt->second.speedCurve.Evaluate(editorPreviewTime) : 1.0f;
+        const float playRate = assetIt != animationNotifyAssets.end()? assetIt->second.playRate : 1.0f;
 
         previousEditorPreviewTime = editorPreviewTime;
         const float advancedTime = editorPreviewTime + deltaTime * animationRate * playRate * curveRate;
@@ -2683,7 +2668,6 @@ void AnimationController::DrawEditorPreviewStates()
 
     for (const auto& state : assetIt->second.notifyTrack.states)
     {
-        // Current-time sampling keeps Play, Pause and bidirectional Scrub identical.
         if (editorPreviewTime < state.startTime || editorPreviewTime >= state.endTime)
             continue;
 
@@ -2717,9 +2701,9 @@ void AnimationController::ProcessEditorPreviewEvents(
         }
 
         const bool crossed = wrapped
-            ? ((previousTime < event.time && event.time <= duration) ||
-                (0.0f < event.time && event.time <= currentTime))
-            : (previousTime < event.time && currentTime >= event.time);
+                                 ? ((previousTime < event.time && event.time <= duration) ||
+                                     (0.0f < event.time && event.time <= currentTime))
+                                 : (previousTime < event.time && currentTime >= event.time);
         if (crossed)
         {
             owner->HandleCommonAnimationNotifyEvent(event);
@@ -2727,7 +2711,6 @@ void AnimationController::ProcessEditorPreviewEvents(
         }
     }
 }
-
 
 void AnimationController::ProcessEditorPreviewStatesForward(
     const float previousTime, const float currentTime)
@@ -2746,18 +2729,17 @@ void AnimationController::ProcessEditorPreviewStatesForward(
         if (!IsEditorPreviewStateDispatchable(state))
             continue;
 
-        if (!activeEditorPreviewStates.contains(stateIndex) &&
-            previousTime < state.startTime && currentTime >= state.startTime)
+        if (!activeEditorPreviewStates.contains(stateIndex) && previousTime < state.startTime && currentTime >= state.startTime)
         {
             BeginEditorPreviewState(stateIndex);
         }
-        if (activeEditorPreviewStates.contains(stateIndex) &&
-            previousTime < state.endTime && currentTime >= state.endTime)
+        if (activeEditorPreviewStates.contains(stateIndex) && previousTime < state.endTime && currentTime >= state.endTime)
         {
             EndEditorPreviewState(stateIndex);
         }
     }
 }
+
 void AnimationController::SyncEditorPreviewStates(const float time)
 {
     const auto assetIt = animationNotifyAssets.find(selectedTimelineClip);
@@ -2774,9 +2756,7 @@ void AnimationController::SyncEditorPreviewStates(const float time)
         activeIndices.push_back(stateIndex);
     for (const size_t stateIndex : activeIndices)
     {
-        const bool shouldRemainActive = stateIndex < states.size() &&
-            IsEditorPreviewStateDispatchable(states[stateIndex]) &&
-            time >= states[stateIndex].startTime && time < states[stateIndex].endTime;
+        const bool shouldRemainActive = stateIndex < states.size() && IsEditorPreviewStateDispatchable(states[stateIndex]) && time >= states[stateIndex].startTime && time < states[stateIndex].endTime;
         if (!shouldRemainActive)
             EndEditorPreviewState(stateIndex);
     }
@@ -2784,28 +2764,11 @@ void AnimationController::SyncEditorPreviewStates(const float time)
     for (size_t stateIndex = 0; stateIndex < states.size(); ++stateIndex)
     {
         const AnimationNotifyState& state = states[stateIndex];
-        if (IsEditorPreviewStateDispatchable(state) &&
-            time >= state.startTime && time < state.endTime)
+        if (IsEditorPreviewStateDispatchable(state) && time >= state.startTime && time < state.endTime)
         {
             BeginEditorPreviewState(stateIndex);
         }
     }
-}
-
-void AnimationController::EndAllEditorPreviewStates()
-{
-    std::vector<size_t> activeIndices;
-    activeIndices.reserve(activeEditorPreviewStates.size());
-    for (const auto& [stateIndex, state] : activeEditorPreviewStates)
-        activeIndices.push_back(stateIndex);
-    for (const size_t stateIndex : activeIndices)
-        EndEditorPreviewState(stateIndex);
-    activeEditorPreviewStates.clear();
-}
-
-bool AnimationController::IsEditorPreviewStateDispatchable(const AnimationNotifyState& state) const
-{
-    return state.type != AnimationNotifyState::Type::MotionWarp;
 }
 
 void AnimationController::BeginEditorPreviewState(const size_t stateIndex)
@@ -2821,6 +2784,7 @@ void AnimationController::BeginEditorPreviewState(const size_t stateIndex)
         OnNotifyBegin(state);
 }
 
+
 void AnimationController::EndEditorPreviewState(const size_t stateIndex)
 {
     const auto activeIt = activeEditorPreviewStates.find(stateIndex);
@@ -2830,44 +2794,21 @@ void AnimationController::EndEditorPreviewState(const size_t stateIndex)
     OnNotifyEnd(activeIt->second);
     activeEditorPreviewStates.erase(activeIt);
 }
-
-void AnimationController::BeginEditorPreview(const bool playing, const bool resetTime)
+void AnimationController::EndAllEditorPreviewStates()
 {
-    ReleaseLatchedVisualPose();
-
-    if (!editorPreviewActive)
-        CaptureEditorRuntimeSnapshot();
-
-    editorPreviewActive = true;
-    editorPreviewPlaying = playing;
-    if (resetTime)
-    {
-        InputSystem::StopRumble();
-        EndAllEditorPreviewStates();
-        editorPreviewTime = 0.0f;
-    }
-    previousEditorPreviewTime = editorPreviewTime;
-    if (playing)
-        SyncEditorPreviewStates(editorPreviewTime);
-    ApplyEditorPreviewPose();
+    std::vector<size_t> activeIndices;
+    activeIndices.reserve(activeEditorPreviewStates.size());
+    for (const auto& [stateIndex, state] : activeEditorPreviewStates)
+        activeIndices.push_back(stateIndex);
+    for (const size_t stateIndex : activeIndices)
+        EndEditorPreviewState(stateIndex);
+    activeEditorPreviewStates.clear();
 }
 
-void AnimationController::SetEditorPreviewTime(const float time)
+bool AnimationController::IsEditorPreviewStateDispatchable(const AnimationNotifyState& state) const
 {
-    ReleaseLatchedVisualPose();
-
-    if (!target || !target->model || selectedTimelineClip >= target->model->animations.size())
-        return;
-
-    editorPreviewActive = true;
-    editorPreviewPlaying = false;
-    const float duration = target->model->animations[selectedTimelineClip].duration;
-    editorPreviewTime = std::clamp(time, 0.0f, duration);
-    SyncEditorPreviewStates(editorPreviewTime);
-    previousEditorPreviewTime = editorPreviewTime;
-    ApplyEditorPreviewPose();
+    return state.type != AnimationNotifyState::Type::MotionWarp;
 }
-
 
 void AnimationController::CaptureEditorRuntimeSnapshot()
 {
@@ -2893,6 +2834,7 @@ void AnimationController::CaptureEditorRuntimeSnapshot()
     editorRuntimeSnapshot.suppressNormalRootMotionUntilTransitionCompleted = suppressNormalRootMotionUntilTransitionCompleted;
     editorRuntimeSnapshot.suppressNormalRootMotionObservedTransition = suppressNormalRootMotionObservedTransition;
 }
+
 void AnimationController::EndEditorPreview()
 {
     InputSystem::StopRumble();
@@ -2942,29 +2884,4 @@ void AnimationController::EndEditorPreview()
     }
     resetRootMotionDelta = true;
     editorRuntimeSnapshot.valid = false;
-}
-
-bool AnimationController::IsVisualPoseLatchValid() const
-{
-    if (!visualPoseLatchActive || visualPoseLatchNodes.empty() || visualPoseLatchTargets.size() != extraTargets.size() + 1) return false;
-    const auto isTargetValid = [this](const VisualPoseLatchTarget& latchTarget, SkeletalMeshComponent* expectedTarget)
-        { return expectedTarget && expectedTarget->model && latchTarget.target == expectedTarget && latchTarget.model == expectedTarget->model.get() && latchTarget.nodeCount == visualPoseLatchNodes.size() && expectedTarget->model->GetNodes().size() == latchTarget.nodeCount; };
-    if (!isTargetValid(visualPoseLatchTargets.front(), target)) return false;
-    for (size_t index = 0; index < extraTargets.size(); ++index) if (!isTargetValid(visualPoseLatchTargets[index + 1], extraTargets[index])) return false;
-    return true;
-}
-
-const std::vector<InterleavedGltfModel::Node>& AnimationController::GetRuntimeVisualPoseNodes()
-{
-    if (visualPoseLatchActive && !IsVisualPoseLatchValid()) { visualPoseLatchActive = false; visualPoseLatchNodes.clear(); visualPoseLatchTargets.clear(); }
-    return visualPoseLatchActive ? visualPoseLatchNodes : finalNodes;
-}
-
-void AnimationController::ApplyRuntimeVisualPose()
-{
-    if (!target) return;
-    const auto& visualPoseNodes = GetRuntimeVisualPoseNodes();
-    target->SetModelNodes(visualPoseNodes);
-    target->UpdateChildTransforms(UpdateTransformFlags::None);
-    for (auto* extraTarget : extraTargets) { extraTarget->SetModelNodes(visualPoseNodes); extraTarget->UpdateChildTransforms(UpdateTransformFlags::None); }
 }
