@@ -2,11 +2,9 @@
 
 #include <d3d11_1.h>
 #include <wrl.h>
-
 #include <unordered_map>
 #include <string>
 #include <future>
-
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -73,12 +71,6 @@ public:
     UIManager* GetUIManager() { return uiManager.get(); }
 
     CameraManager* GetCameraManager() const { return cameraManager.get(); }
-    const CameraManager* GetConstCameraManager() { return cameraManager.get(); }
-
-    void ClearActorManager() const
-    {
-        actorManager_->ClearAll();
-    }
 
     bool IsPaused() const { return paused; }
 
@@ -98,7 +90,6 @@ public:
         }
         return activeCamera.lock().get();
     }
-    //std::unique_ptr<ActorManager>& GetActorManager() { return actorManager_; }
 private:
     // 純粋仮想関数：シーンの初期化
     virtual bool Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props) = 0;
@@ -171,8 +162,6 @@ public:
     // 参照を返す
     SceneSettings& GetSceneSettings()  { return settings; }
 
-    // シーンのライト設定などを設定する
-    void SetSceneSettings(const SceneSettings& settings) { this->settings = settings; }
 private:
     // シーンの更新
     static bool _update(ID3D11DeviceContext* immediateContext, float deltaTime);
@@ -287,13 +276,6 @@ public:
         return names;
     }
 
-    static const std::string& GetCurrentSceneName()
-    {
-        static std::string empty;
-        if (_current_scene)
-            return typeid(*_current_scene).name();
-        return empty;
-    }
 private:
     struct PreloadEffectTicketBatch
     {
@@ -317,7 +299,7 @@ private:
             {
                 bool success = _future.get();// 非同期処理の結果（true/false）を取得（取得しないと future は無効化できない）
                 // 初期化が失敗していたらエラーを出す
-                _ASSERT_EXPR(success, L"The scene initioalization process using asynchronous processing hasa failed.");
+                _ASSERT_EXPR(success, L"The scene initialization process using asynchronous processing has failed.");
             }
             else
             {
@@ -328,7 +310,6 @@ private:
     }
 
 
-    //The compiler version must be set to C++20 or higher to use the reserved word 'static inline'.
     // 「シーン名 → シーン生成関数」 のマップにアクセスできる関数
     static inline std::unordered_map<std::string, std::function<std::unique_ptr<Scene>()>>& _reflections()
     {

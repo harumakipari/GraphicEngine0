@@ -160,7 +160,6 @@ float3 main(VS_OUT pin) : SV_TARGET
         positionTo = positionTexture.Sample(samplerStates[LINEAR_BORDER_WHITE], uv.xy); // world ‹óŠÔ
         positionTo = mul(float4(positionTo.xyz, 1.0), view);
 
-        // PerspectiveCorrect Interpolation
         viewDistance = (startView.z * endView.z) / lerp(endView.z, startView.z, search1);
         depth = viewDistance - positionTo.z;
         

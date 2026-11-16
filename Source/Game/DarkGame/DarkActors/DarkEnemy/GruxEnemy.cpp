@@ -1691,11 +1691,8 @@ void GruxEnemy::OnSelectedActionStartedSuccessfully()
         Camera* activeCamera = GetOwnerScene()->GetActiveCamera();
         if (auto* darkCamera = dynamic_cast<DarkCameraActor*>(activeCamera))
         {
-            const DirectX::XMFLOAT3 bossCameraPosition = cameraTargetComponent
-                ? cameraTargetComponent->GetComponentLocation()
-                : GetPosition();
-            darkCamera->RequestOffscreenAttackAssist(
-                bossCameraPosition, cameraAssistStrength, cameraAssistDuration);
+            const DirectX::XMFLOAT3 bossCameraPosition = cameraTargetComponent ? cameraTargetComponent->GetComponentLocation() : GetPosition();
+            darkCamera->RequestOffscreenAttackAssist(bossCameraPosition, cameraAssistStrength, cameraAssistDuration);
         }
     }
 
@@ -1706,11 +1703,8 @@ void GruxEnemy::RequestJumpAttackCameraAssist() const
     Camera* activeCamera = GetOwnerScene()->GetActiveCamera();
     if (auto* darkCamera = dynamic_cast<DarkCameraActor*>(activeCamera))
     {
-        const DirectX::XMFLOAT3 bossCameraPosition = cameraTargetComponent
-            ? cameraTargetComponent->GetComponentLocation()
-            : GetPosition();
-        darkCamera->RequestOffscreenAttackAssist(
-            bossCameraPosition, 0.70f, 0.80f);
+        const DirectX::XMFLOAT3 bossCameraPosition = cameraTargetComponent ? cameraTargetComponent->GetComponentLocation() : GetPosition();
+        darkCamera->RequestOffscreenAttackAssist(bossCameraPosition, 0.70f, 0.80f);
     }
 }
 
@@ -1721,8 +1715,7 @@ void GruxEnemy::StartSelectedActionCooldown()
         if (combatActionData[i].type != selectedActionType)
             continue;
 
-        combatActionCooldownRemaining[i] =
-            (std::max)(0.0f, combatActionData[i].cooldownDuration);
+        combatActionCooldownRemaining[i] = (std::max)(0.0f, combatActionData[i].cooldownDuration);
         return;
     }
 }
@@ -2078,13 +2071,7 @@ void GruxEnemy::StartGruxNamePerform(float duration, float start, float end)
     {
         EasingHandler handler;
 
-        handler.AddEasing(
-            TestEaseType::InSine,
-            start,
-            end,
-            duration
-        );
-
+        handler.AddEasing(TestEaseType::InSine, start, end, duration);
 
         handler.SetCompletedFunction([this]()
             {
@@ -2445,8 +2432,7 @@ int GruxEnemy::GetActiveChargeDamage() const
     return 1;
 }
 
-bool GruxEnemy::EvaluateChargeStartClearance(const DirectX::XMFLOAT3& startPosition,
-    const DirectX::XMFLOAT3& direction, float& outClearance, bool& outHit) const
+bool GruxEnemy::EvaluateChargeStartClearance(const DirectX::XMFLOAT3& startPosition, const DirectX::XMFLOAT3& direction, float& outClearance, bool& outHit) const
 {
     outClearance = 0.0f;
     outHit = false;
@@ -2595,17 +2581,10 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
     if (characterMovementComponent &&
         characterMovementComponent->ConsumeBossRoomProbeChargeWallHitEvent(bossRoomProbeBlockEvent))
     {
-        const float requestedLength = std::sqrt(
-            bossRoomProbeBlockEvent.requestedMove.x * bossRoomProbeBlockEvent.requestedMove.x +
-            bossRoomProbeBlockEvent.requestedMove.z * bossRoomProbeBlockEvent.requestedMove.z);
-        const float requestedAlongCharge = requestedLength > 0.001f
-            ? (bossRoomProbeBlockEvent.requestedMove.x * chargeDirection.x +
-                bossRoomProbeBlockEvent.requestedMove.z * chargeDirection.z) / requestedLength
-            : 0.0f;
+        const float requestedLength = std::sqrt(bossRoomProbeBlockEvent.requestedMove.x * bossRoomProbeBlockEvent.requestedMove.x + bossRoomProbeBlockEvent.requestedMove.z * bossRoomProbeBlockEvent.requestedMove.z);
+        const float requestedAlongCharge = requestedLength > 0.001f ? (bossRoomProbeBlockEvent.requestedMove.x * chargeDirection.x + bossRoomProbeBlockEvent.requestedMove.z * chargeDirection.z) / requestedLength : 0.0f;
         const uint32_t bossRoomWallLayer = CollisionHelper::ToBit(CollisionLayer::WorldPropsNoRaycast);
-        if (!bossRoomProbeBlockEvent.initialOverlap &&
-            (bossRoomProbeBlockEvent.hitLayer & bossRoomWallLayer) != 0 &&
-            requestedAlongCharge > 0.95f && bossRoomProbeBlockEvent.forwardMoveLost > 0.01f)
+        if (!bossRoomProbeBlockEvent.initialOverlap && (bossRoomProbeBlockEvent.hitLayer & bossRoomWallLayer) != 0 && requestedAlongCharge > 0.95f && bossRoomProbeBlockEvent.forwardMoveLost > 0.01f)
         {
             if (allowTripleWallTurn && chargeBT.phase2SettingsLatched &&
                 chargeBT.tripleChargeIndex < 2)
@@ -2739,9 +2718,7 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
     if (chargeElapsedTime >= chargeSafetyTimeout)
     {
         chargeEndReason = ChargeAttackEndReason::SafetyTimeout;
-        const std::string timeoutMessage =
-            "[BossCharge][End] reason=SafetyTimeout elapsed=" +
-            std::to_string(chargeElapsedTime);
+        const std::string timeoutMessage = "[BossCharge][End] reason=SafetyTimeout elapsed=" + std::to_string(chargeElapsedTime);
         Logger::Warning(Logger::LogCategory::Gameplay, timeoutMessage.c_str());
         StopChargeAttackMovement();
         return chargeEndReason;
@@ -3020,12 +2997,9 @@ bool GruxEnemy::FindAttackSetupTarget(float minDistance, float maxDistance, floa
     const float baseX = bossPosition.x - playerPosition.x;
     const float baseZ = bossPosition.z - playerPosition.z;
     const float baseLength = std::sqrt(baseX * baseX + baseZ * baseZ);
-    const DirectX::XMFLOAT3 baseDirection = baseLength > FLT_EPSILON
-        ? DirectX::XMFLOAT3{ baseX / baseLength, 0.0f, baseZ / baseLength }
-    : GetForward();
+    const DirectX::XMFLOAT3 baseDirection = baseLength > FLT_EPSILON ? DirectX::XMFLOAT3{ baseX / baseLength, 0.0f, baseZ / baseLength } : GetForward();
     static thread_local std::mt19937 randomEngine{ std::random_device{}() };
-    std::uniform_real_distribution<float> distanceDistribution(
-        (std::min)(minDistance, maxDistance), (std::max)(minDistance, maxDistance));
+    std::uniform_real_distribution<float> distanceDistribution((std::min)(minDistance, maxDistance), (std::max)(minDistance, maxDistance));
     const float setupDistance = distanceDistribution(randomEngine);
     const float safeAngleStep = (std::max)(1.0f, angleStep);
     const float safeClampTolerance = (std::max)(0.0f, clampTolerance);
@@ -3068,8 +3042,7 @@ bool GruxEnemy::ResolveBossRoomPositioningMove(const DirectX::XMFLOAT3& startPos
     const float probeRadius = characterMovementComponent->GetActiveHorizontalWallProbeRadius();
     const float probeOriginY = startPosition.y + (std::max)(1.0f, probeRadius + 0.05f);
     DarkStage::BossRoomHorizontalMoveResult result;
-    if (!stage->ResolveBossRoomHorizontalMove(startPosition, desiredTarget,
-        probeOriginY, probeRadius, result) || !result.valid)
+    if (!stage->ResolveBossRoomHorizontalMove(startPosition, desiredTarget, probeOriginY, probeRadius, result) || !result.valid)
         return false;
     outResolvedTarget = result.resolvedTarget;
     outPathBlocked = result.pathBlocked;
@@ -3163,6 +3136,10 @@ void GruxEnemy::InitializeSkeletalMeshAndAnimations(const std::string& parentNam
     controller->AddAnimation("Hit_Combat_Large_F", 25);
     controller->AddAnimation("Hit_Combat_Large_L", 26);
     controller->AddAnimation("Hit_Combat_Large_R", 27);
+    controller->AddAnimation("TravelMode_Bwd_0", 28);
+    controller->AddAnimation("TravelMode_Lft_0", 29);
+    controller->AddAnimation("TravelMode_Rgt_0", 30);
+    controller->AddAnimation("Dodge_Bwd", 31);
 
     // ‘S‚Ä‚ÌNotifyAssets‚ðƒ[ƒh‚·‚é
     controller->LoadAllNotifyAssets(GetName());

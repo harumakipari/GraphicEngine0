@@ -38,7 +38,6 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
         lightManager->SetDirectionalLight(this, lightDirection, lightColor);
     }
 
-#if 1
     // シーンエフェクト
     {
         {
@@ -56,8 +55,6 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
     depthOfFieldEffect = std::make_unique<DepthOfFieldEffect>();
     depthOfFieldEffect->Initialize(device, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
 
-#endif // 0
-
     HRESULT hr = { S_OK };
 
     //スカイマップ
@@ -74,17 +71,13 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
     radialBlurEffect->Initialize(device, static_cast<uint32_t>(width), height);
     imGuiGizmoBuffer = std::make_unique<FrameBuffer>(device, static_cast<uint32_t>(width), height, false);
 
-    // GBUFFER
     gBufferRenderTarget = std::make_unique<decltype(gBufferRenderTarget)::element_type>(device, static_cast<uint32_t>(width), height);
     hr = CreatePsFromCSO(device, "./Data/Shaders/DeferredLightingPS.cso", deferredPs.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
     hr = CreatePsFromCSO(device, "./Data/Shaders/PostEffectPS.cso", postEffectPs.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
     hr = CreatePsFromCSO(device, "./Data/Shaders/FinalPS.cso", finalPs.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
     hr = CreatePsFromCSO(device, "./Data/Shaders/PlayerSwordGhostPS.cso", ghostPs.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
@@ -119,25 +112,13 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
     XMFLOAT2 imageSize = { screenWidth,screenHeight };
     XMFLOAT2 imageMin = { 0.0f,0.0f };
 
-    InputSystem::SetViewportRect(
-        imageMin.x,
-        imageMin.y,
-        imageSize.x,
-        imageSize.y
-    );
-    Graphics::SetViewport(
-        imageMin.x,
-        imageMin.y,
-        imageSize.x,
-        imageSize.y
-    );
+    InputSystem::SetViewportRect(imageMin.x,imageMin.y,imageSize.x,imageSize.y);
+    Graphics::SetViewport(imageMin.x,imageMin.y,imageSize.x,imageSize.y);
 
     temporalAa.Initialize(device, static_cast<UINT>(screenWidth), static_cast<UINT>(screenHeight));
 
     shadowMap = std::make_unique<shadow_map>(device, shadowmapWidth, shadowmapHeight);
-
     huskParticles = std::make_unique<HuskParticles>(device);
-    particleMeshModel = std::make_unique<InterleavedGltfModel>(device, "./Data/Models/Weapons/PlayerSword/Sword.gltf", ModelTypes::ModelMode::SkeletalMesh, false, true);
     swordGhostMeshModel = std::make_unique<InterleavedGltfModel>(device, "./Data/Models/Weapons/PlayerSwordGhost/Sword.gltf", ModelTypes::ModelMode::SkeletalMesh, false, true);
 
     return true;
@@ -364,7 +345,6 @@ void SceneBase::UpdateConstantBuffer(ID3D11DeviceContext* immediateContext, floa
     shaderCBuffer->data.objectIblDiffuseIntensity = shader.objectIblDiffuseIntensity;
     shaderCBuffer->data.objectIblSpecularIntensity = shader.objectIblSpecularIntensity;
 
-    //shaderCBuffer->data.renderStep = shader.renderStep; // これはImGuiで
     shaderCBuffer->data.enableToneMapping = shader.enableToneMapping;
     shaderCBuffer->data.enableSsao = shader.enableSsao;
 
@@ -534,7 +514,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
         // メインフレームバッファとブルームエフェクトを組み合わせて描画
         fullscreenQuad->Blit(immediateContext, shaderResourceViews, 0, _countof(shaderResourceViews), deferredPs.Get());
 
-        // Modes 2+ show the Deferred Lighting target directly. This copy is made before TAA, fog, SSAO, SSR, bloom, DoF, tone mapping, and final grading.
         if (Scene::GetCurrentScene()->GetSceneSettings().sceneShaderConstants.finalColorDebugMode >= 2)
         {
             Microsoft::WRL::ComPtr<ID3D11Resource> deferredLitSource;
@@ -703,7 +682,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
             finalBuffer->Clear(immediateContext);
             finalBuffer->Activate(immediateContext);
 
-            // FINAL_PASS
             {
                 RenderState::BindBlendState(immediateContext, BLEND_STATE::NONE);
                 RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_OFF_ZW_OFF);
@@ -991,7 +969,6 @@ void SceneBase::DrawOutliner()
 
 void SceneBase::DrawSceneSettingsTab()
 {
-    // Light Settings
     if (ImGui::CollapsingHeader(U8("Light Settings"), ImGuiTreeNodeFlags_DefaultOpen))
     {
         ImGui::Checkbox("useDrawDebug", &useDrawDebug);
@@ -1188,8 +1165,6 @@ void SceneBase::DrawPostEffectTab()
     };
     ImGui::Combo("Final Color Debug View", &shader.finalColorDebugMode,
         finalColorDebugItems, IM_ARRAYSIZE(finalColorDebugItems));
-    // Hair-only specular isolation toggles. These bits reuse the existing
-    // final-sRGB padding bytes, so the shared shader CB layout is unchanged.
     const auto hairSpecularToggle = [&](const char* label, const int bit)
         {
             bool disabled = (shader.hairSpecularDebugDisableMask & bit) != 0;
@@ -1230,7 +1205,6 @@ void SceneBase::DrawPostEffectTab()
     ImGui::ColorEdit3(U8("ボスの部屋の色"), &shader.bossRoomColor.x);
 
     sceneEffectManager->DrawGui();
-    //postEffectManager->DrawGui();
     // -------------------------
     // CSM (シャドウ関連)
     // -------------------------

@@ -1,8 +1,6 @@
 #include "pch.h"
 #include "Scene.h"
 
-#include <chrono>
-
 #include "Engine/Effects/EffectManager.h"
 #include "Graphics/Resource/Texture.h"
 #include "UI/Game/SceneTransitionManager.h"
@@ -63,7 +61,6 @@ bool Scene::_update(ID3D11DeviceContext* immediateContext, float deltaTime)
     {
         _current_scene->uiManager->Update(deltaTime);
     }
-
 
     // Œ»Ý‚ÌActorManager‚ÌXVˆ—
     if (_current_scene->actorManager_)

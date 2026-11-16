@@ -167,8 +167,6 @@ inline void from_json(const nlohmann::json& j, SceneShaderConstants& s)
     if (j.contains("dofRange")) j.at("dofRange").get_to(s.dofRange);
     if (j.contains("dofBlurStrength")) j.at("dofBlurStrength").get_to(s.dofBlurStrength);
 
-    // Legacy presets use one enemy IBL value. Apply it to both new controls,
-    // then let either explicit new value override its corresponding channel.
     if (j.contains("objectIblIntensity"))
     {
         float legacyObjectIblIntensity = s.objectIblDiffuseIntensity;
@@ -429,16 +427,6 @@ inline void to_json(json& j, const SceneState& s)
 }
 inline void from_json(const json& j, SceneState& s)
 {
-#if 0
-    j.at("lightSaveData").get_to(s.lightSaveData);
-    j.at("shader").get_to(s.shader);
-    j.at("cascadeShadow").get_to(s.cascadeShadow);
-    j.at("fog").get_to(s.fog);
-    j.at("ssr").get_to(s.ssr);
-    j.at("ssao").get_to(s.ssao);
-    j.at("bloom").get_to(s.bloom);
-
-#else
     j.at("lightSaveData").get_to(s.lightSaveData);
     j.at("shader").get_to(s.shader);
     j.at("cascadeShadow").get_to(s.cascadeShadow);
@@ -449,11 +437,7 @@ inline void from_json(const json& j, SceneState& s)
     j.at("camera").get_to(s.camera);
     j.at("cameraBookmarks").get_to(s.cameraBookmarks);
     j.at("actorStates").get_to(s.actorStates);
-#endif // 0
 }
-
-
-
 
 void SaveSceneState(const std::string& path, SceneState& state)
 {

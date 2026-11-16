@@ -21,7 +21,6 @@
 #include "Graphics/PostProcess/DepthOfFieldEffect.h"
 #include "Graphics/PostProcess/RadialBlurEffect.h"
 #include "Graphics/Shadow/ShadowMap.h"
-#include "UI/UIManager.h"
 
 // 全シーン共通の基底クラス。描画・定数バッファ・ライト・ポストエフェクトを統一管理する。
 class SceneBase : public Scene
@@ -40,24 +39,22 @@ public:
 
     using RenderHook = std::function<void(ID3D11DeviceContext*)>;
 
-    virtual bool Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props) override;
+    bool Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props) override;
 
-    virtual void Update(float deltaTime) override;
+    void Update(float deltaTime) override;
 
     // 定数バッファの更新処理をシーンごとにカスタマイズできるようにするための仮想関数
     virtual void UpdateConstants(ID3D11DeviceContext* immediateContext, float deltaTime) {}
 
-    virtual void Render(ID3D11DeviceContext* immediateContext, float deltaTime) override;
+    void Render(ID3D11DeviceContext* immediateContext, float deltaTime) override;
 
-    virtual bool Uninitialize(ID3D11Device* device) override;
-    virtual bool OnSizeChanged(ID3D11Device* device, UINT64 width, UINT height) override;
+    bool Uninitialize(ID3D11Device* device) override;
+    bool OnSizeChanged(ID3D11Device* device, UINT64 width, UINT height) override;
     void DrawGui() override;
 
-    void StartJustDodgeRadialBlur() { if (radialBlurEffect) radialBlurEffect->SetRadialActive(true); }
-    void StopJustDodgeRadialBlur() { if (radialBlurEffect) radialBlurEffect->SetRadialActive(false); }
+    void StartJustDodgeRadialBlur() const { if (radialBlurEffect) radialBlurEffect->SetRadialActive(true); }
+    void StopJustDodgeRadialBlur() const { if (radialBlurEffect) radialBlurEffect->SetRadialActive(false); }
     bool HasHuskCaptureStarted() const { return huskCompletionTracking && gruxHuskCaptured; }
-    double GetHuskPlaybackElapsed() const { return huskPlaybackElapsed; }
-    double GetHuskCompletionDuration() const { return huskCompletionDuration; }
     bool IsHuskComplete() const;
 
     void RegisterRenderHook(const RenderPass pass, const RenderHook& hook)
@@ -82,6 +79,11 @@ protected:
 
     // 追加のImGui
     virtual void DrawGuiPlusAlpha() {}
+
+    void ResetHuskCompletionTracking();
+    void BeginHuskCompletionTracking();
+    void UpdateHuskCompletionTracking(float deltaTime);
+
 private:
     void DeferredRender(ID3D11DeviceContext* immediateContext, ViewConstants& viewConstants);
 
@@ -102,6 +104,7 @@ private:
     void DrawViewport();
 
     void DrawMovieEditorOnly();
+
     void DrawEffectEditorOnly();
 
 protected:
@@ -133,7 +136,6 @@ protected:
     std::unique_ptr<SkyMap> skyMap;
     std::unique_ptr<LightManager> lightManager;
     std::unique_ptr<SceneEffectManager> sceneEffectManager;
-    std::unique_ptr<SceneRenderer> sceneRenderer_;
 
     std::unique_ptr<DepthOfFieldEffect> depthOfFieldEffect;
     std::unique_ptr<RadialBlurEffect> radialBlurEffect;
@@ -152,7 +154,6 @@ protected:
 
     // HuskParticle用
     std::unique_ptr<HuskParticles> huskParticles;
-    std::unique_ptr<InterleavedGltfModel> particleMeshModel;
     std::unique_ptr<InterleavedGltfModel> swordGhostMeshModel;
     bool gruxHuskCaptured = false;
     bool gruxHuskCaptureRequested = false;
@@ -161,9 +162,6 @@ protected:
     bool gruxHuskPreviewCaptureRequested = false;
     bool gruxHuskPlaybackActive = false;
     bool gruxHuskBackupValid = false;
-    void ResetHuskCompletionTracking();
-    void BeginHuskCompletionTracking();
-    void UpdateHuskCompletionTracking(float deltaTime);
     bool huskCompletionTracking = false;
     double huskPlaybackElapsed = 0.0;
     double huskCompletionDuration = 0.0;
@@ -182,9 +180,6 @@ protected:
     std::shared_ptr<Actor> selectedActor_;  // 選択中のアクターを保持
 
     SceneRenderer sceneRender;
-
-    // メンバー関数
-    virtual void DrawSceneGui() {}///< 各シーン固有のImGui描画フック
 
     std::unordered_map<RenderPass, std::vector<RenderHook>> renderHooks;
 
