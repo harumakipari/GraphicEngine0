@@ -11,12 +11,10 @@
 #include "Game/Scenes/GameScene.h"
 #include <fstream>
 #include <json.hpp>
-#include "Physics/CollisionFunction.h"
-#include "Components/CollisionShape/ShapeComponent.h"
 
 namespace
 {
-    DirectX::XMFLOAT4 CreateDeathWideLookRotation(const DirectX::XMFLOAT3& eye,const DirectX::XMFLOAT3& target)
+    DirectX::XMFLOAT4 CreateDeathWideLookRotation(const DirectX::XMFLOAT3& eye, const DirectX::XMFLOAT3& target)
     {
         using namespace DirectX;
         XMFLOAT3 direction = MathHelper::Subtract(target, eye);
@@ -39,132 +37,6 @@ namespace
         return result;
     }
 
-    const char* CollisionLayerName(uint32_t layer)
-    {
-        if (layer == CollisionHelper::ToBit(CollisionLayer::WorldStatic)) return "WorldStatic";
-        if (layer == CollisionHelper::ToBit(CollisionLayer::Floor)) return "Floor";
-        if (layer == CollisionHelper::ToBit(CollisionLayer::WorldProps)) return "WorldProps";
-        if (layer == CollisionHelper::ToBit(CollisionLayer::WorldPropsNoRaycast)) return "WorldPropsNoRaycast";
-        if (layer == CollisionHelper::ToBit(CollisionLayer::Convex)) return "Convex";
-        if (layer == CollisionHelper::ToBit(CollisionLayer::Wall)) return "Wall";
-        return "Unknown";
-    }
-
-    bool IsDeathWideAnchorUsable(
-        const std::shared_ptr<SceneComponent>& anchor,
-        const DirectX::XMFLOAT3& lookPoint,
-        float minimumDistance,
-        MovieCameraManagerActor::DeathWideAnchorValidationDebug* debug)
-    {
-        if (debug)
-        {
-            debug->targetPosition = lookPoint;
-            debug->name = anchor ? anchor->GetName() : "None";
-        }
-        if (!anchor)
-        {
-            if (debug) debug->reason = "InvalidAnchor";
-            return false;
-        }
-
-        const DirectX::XMFLOAT3 anchorPosition =
-            anchor->GetComponentLocation();
-        const float distance = MathHelper::Distance(anchorPosition, lookPoint);
-        if (debug)
-        {
-            debug->anchorPosition = anchorPosition;
-            debug->distance = distance;
-        }
-        if (distance < minimumDistance)
-        {
-            if (debug) debug->reason = "TooClose";
-            return false;
-        }
-
-        const uint32_t mask =
-            CollisionHelper::ToBit(CollisionLayer::WorldStatic) |
-            CollisionHelper::ToBit(CollisionLayer::Floor) |
-            CollisionHelper::ToBit(CollisionLayer::WorldProps);
-        HitResultWithActor hit{};
-        const bool targetPathHit = CollisionFunction::SphereRayCast(
-            lookPoint, anchorPosition, hit, 0.3f, mask);
-        if (debug)
-        {
-            debug->targetPathHit = targetPathHit;
-            debug->targetPathInitialOverlap = hit.initialOverlap;
-            debug->targetPathHitDistance = hit.distance;
-            debug->targetPathHitPosition = hit.hitPoint;
-            debug->targetPathHitNormal = hit.normal;
-            if (hit.component)
-                debug->targetPathLayer = CollisionLayerName(
-                    hit.component->GetCollisionLayer());
-        }
-        if (targetPathHit)
-        {
-            if (debug) debug->reason = "TargetPathBlocked";
-            return false;
-        }
-
-        const DirectX::XMFLOAT3 probeDirection = MathHelper::Normalize(
-            MathHelper::Subtract(anchorPosition, lookPoint));
-        const DirectX::XMFLOAT3 probeEnd = MathHelper::Add(
-            anchorPosition, MathHelper::Multiply(probeDirection, 0.02f));
-        if (debug)
-        {
-            debug->probeStart = anchorPosition;
-            debug->probeEnd = probeEnd;
-        }
-        HitResultWithActor probeHit{};
-        const bool probeCastHit = CollisionFunction::SphereRayCast(
-            anchorPosition, probeEnd, probeHit, 0.3f, mask);
-        const bool probeHitResult = probeCastHit && probeHit.initialOverlap;
-        if (debug)
-        {
-            debug->probeHit = probeCastHit;
-            debug->probeInitialOverlap = probeHit.initialOverlap;
-            if (probeHit.component)
-                debug->probeLayer = CollisionLayerName(
-                    probeHit.component->GetCollisionLayer());
-        }
-        if (probeHitResult)
-        {
-            if (debug) debug->reason = "AnchorInitialOverlap";
-            return false;
-        }
-
-        const DirectX::XMFLOAT3 spaceProbeDirections[] =
-        {
-            { 1.0f, 0.0f, 0.0f }, { -1.0f, 0.0f, 0.0f },
-            { 0.0f, 1.0f, 0.0f }, { 0.0f, -1.0f, 0.0f },
-            { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, -1.0f }
-        };
-        constexpr float spaceProbeLength = 0.05f;
-        for (const auto& direction : spaceProbeDirections)
-        {
-            const DirectX::XMFLOAT3 end = MathHelper::Add(
-                anchorPosition,
-                MathHelper::Multiply(direction, spaceProbeLength));
-            HitResultWithActor spaceHit{};
-            if (CollisionFunction::SphereRayCast(
-                anchorPosition, end, spaceHit, 0.3f, mask))
-            {
-                if (debug)
-                {
-                    debug->reason = "AnchorSpaceBlocked";
-                    if (spaceHit.component)
-                        debug->spaceProbeLayer = CollisionLayerName(
-                            spaceHit.component->GetCollisionLayer());
-                }
-                return false;
-            }
-        }
-        if (debug)
-        {
-            debug->valid = true;
-            debug->reason = "Valid";
-        }
-        return true;
-    }
 }
 
 void MovieCameraManagerActor::Initialize(const Transform& transform)
@@ -185,8 +57,6 @@ void MovieCameraManagerActor::Update(float deltaTime)
     {
         Logger::Warning(U8("movieCamera is nullptr!"));
     }
-
-    UpdateDeathWideAnchorPreview();
 
     auto scene = GetOwnerScene();
     if (!scene)
@@ -329,7 +199,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
         }
         if (gameScene)
         {
-            gameScene->StartBossRoomLerp(0.0f, 1.0f, duration, [&,gruxEnemy]()
+            gameScene->StartBossRoomLerp(0.0f, 1.0f, duration, [&, gruxEnemy]()
                 {
                     if (auto camera = movieCameraWeakPtr.lock())
                     {
@@ -347,7 +217,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
         }
         doorMovieState = DoorMovieState::BossRoomLerp;
     }
-        break;
+    break;
     case DoorMovieState::BossRoomLerp:
     {
         bossRoomZoomElapsed = (std::min)(
@@ -384,7 +254,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
         const float targetFov = DirectX::XMConvertToRadians(bossRoomZoomTargetFovDegree);
         movieCamera->SetFov(std::lerp(bossRoomZoomStartFov, targetFov, eased));
     }
-        break;
+    break;
     case DoorMovieState::UpPlayerCombat:
         movieCamera->SetOnMovieStart([&, doorActor, player, gruxEnemy]()
             {
@@ -461,7 +331,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
                     DarkCameraActor::CameraPose start = darkCameraActor->CreatePoseFromMovie(movieCamera);
                     DarkCameraActor::CameraPose target = darkCameraActor->CreateFocusPose();
                     bossEntryExternalBlendActive = true;
-                    darkCameraActor->StartExternalBlend(start, target, 2.0f, [this, player,gruxEnemy,gameScene]()
+                    darkCameraActor->StartExternalBlend(start, target, 2.0f, [this, player, gruxEnemy, gameScene]()
                         {
                             bossEntryExternalBlendActive = false;
                             FinishBossEntryToBattle();
@@ -543,9 +413,6 @@ void MovieCameraManagerActor::DrawImGuiDetails()
     ImGui::SameLine();
     if (ImGui::Button("Load Prison Opening Settings"))
         LoadPrisonOpeningEyeSettings();
-
-    ImGui::Checkbox("DeathWide Anchor Preview",
-        &deathWideAnchorPreviewEnabled);
 
     ImGui::DragFloat("Boss Room Zoom Duration", &bossRoomZoomDuration,
         0.05f, 0.01f, 10.0f, "%.2f sec");
@@ -651,8 +518,6 @@ bool MovieCameraManagerActor::PlayPrisonOpeningMovie()
 
     const auto player = scene->GetActorManager()->GetActorOfType<Player>();
     prisonOpeningEyeOverrideActive = player && player->BeginPrisonOpeningEyeClosed();
-    prisonOpeningCurrentMovieTime = 0.0f;
-    prisonOpeningCurrentEyeWeight = prisonOpeningEyeOverrideActive ? 1.0f : 0.0f;
     if (!prisonOpeningEyeOverrideActive)
         Logger::Warning("[PrisonOpeningMovie] Failed to begin Player eye-close override.");
 
@@ -978,9 +843,9 @@ void MovieCameraManagerActor::UpdatePrisonOpeningEyeOpening()
 {
     const auto movieCamera = movieCameraWeakPtr.lock();
     const auto scene = GetOwnerScene();
-    const auto player = scene
-        ? scene->GetActorManager()->GetActorOfType<Player>()
-        : nullptr;
+    const auto player = scene ? scene->GetActorManager()->GetActorOfType<Player>() : nullptr;
+    float prisonOpeningCurrentEyeWeight = 0.0f;
+
     if (!movieCamera || !player || !prisonOpeningEyeOverrideActive ||
         !player->IsPrisonOpeningEyeOverrideActive())
     {
@@ -989,7 +854,7 @@ void MovieCameraManagerActor::UpdatePrisonOpeningEyeOpening()
         return;
     }
 
-    prisonOpeningCurrentMovieTime = movieCamera->GetPlaybackElapsedTime();
+    float prisonOpeningCurrentMovieTime = movieCamera->GetPlaybackElapsedTime();
     if (!prisonOpeningEyeOpeningEnabled)
     {
         player->SetPrisonOpeningEyeClosedWeight(0.0f);
@@ -1004,16 +869,10 @@ void MovieCameraManagerActor::UpdatePrisonOpeningEyeOpening()
         return;
     }
 
-    const float evaluationTime = prisonOpeningEyeOpeningPreview
-        ? prisonOpeningEyeOpeningPreviewTime
-        : prisonOpeningCurrentMovieTime;
+    const float evaluationTime = prisonOpeningEyeOpeningPreview ? prisonOpeningEyeOpeningPreviewTime : prisonOpeningCurrentMovieTime;
     const float duration = (std::max)(prisonOpeningEyeOpenDuration, FLT_EPSILON);
-    const float normalizedTime = std::clamp(
-        (evaluationTime - (prisonOpeningFaceCloseUpKeyTime +
-            prisonOpeningEyeOpenDelay)) / duration,
-        0.0f, 1.0f);
-    const float smoothStep = normalizedTime * normalizedTime *
-        (3.0f - 2.0f * normalizedTime);
+    const float normalizedTime = std::clamp((evaluationTime - (prisonOpeningFaceCloseUpKeyTime + prisonOpeningEyeOpenDelay)) / duration, 0.0f, 1.0f);
+    const float smoothStep = normalizedTime * normalizedTime * (3.0f - 2.0f * normalizedTime);
     prisonOpeningCurrentEyeWeight = 1.0f - smoothStep;
     player->SetPrisonOpeningEyeClosedWeight(prisonOpeningCurrentEyeWeight);
 
@@ -1034,7 +893,6 @@ void MovieCameraManagerActor::EndPrisonOpeningEyeOverride()
         player->EndPrisonOpeningEyeOverride();
     }
     prisonOpeningEyeOverrideActive = false;
-    prisonOpeningCurrentEyeWeight = 0.0f;
 }
 
 void MovieCameraManagerActor::FinishPrisonOpeningMovie()
@@ -1181,116 +1039,6 @@ void MovieCameraManagerActor::PlayMovie(const std::string& file)
 }
 
 
-bool MovieCameraManagerActor::PlayDeathWideFromAnchors(
-    const std::vector<std::shared_ptr<SceneComponent>>& anchors,
-    const std::shared_ptr<SceneComponent>& target,
-    float minimumDistance)
-{
-    auto scene = GetOwnerScene();
-    auto cameraManager = scene ? scene->GetCameraManager() : nullptr;
-    auto movieCamera = movieCameraWeakPtr.lock();
-    if (!scene || !cameraManager || !movieCamera)
-        return false;
-    if (!target)
-        return false;
-
-    const DirectX::XMFLOAT3 targetPosition = target->GetComponentLocation();
-
-    std::shared_ptr<SceneComponent> selectedAnchor;
-    deathWideValidationDebug.clear();
-    for (const auto& anchor : anchors)
-    {
-        deathWideValidationDebug.emplace_back();
-        auto& validation = deathWideValidationDebug.back();
-        const bool usable = IsDeathWideAnchorUsable(
-            anchor, targetPosition, minimumDistance, &validation);
-        if (usable && !selectedAnchor)
-        {
-            selectedAnchor = anchor;
-        }
-    }
-    if (!selectedAnchor)
-    {
-        deathWidePreviewAnchor.reset();
-        deathWidePreviewTarget.reset();
-        deathWidePreviewAnchorName = "None";
-        return false;
-    }
-
-    movieCamera->LoadFromJson(
-        "./Data/Saves/MovieCameras/DeathWide.json");
-    const float fov = movieCamera->GetFirstKeyframeFov();
-    deathWidePreviewAnchor = selectedAnchor;
-    deathWidePreviewTarget = target;
-    deathWidePreviewAnchorName = selectedAnchor->GetName();
-    deathWidePreviewFov = fov;
-
-    if (!cameraManager->IsUseMovie())
-        cameraManager->ToggleMovieCamera(scene);
-    const DirectX::XMFLOAT3 eye = selectedAnchor->GetComponentLocation();
-    movieCamera->CutToWorldPose(
-        eye,
-        CreateDeathWideLookRotation(eye, targetPosition),
-        fov);
-    return true;
-}
-
-void MovieCameraManagerActor::UpdateDeathWideAnchorPreview()
-{
-    if (!deathWideAnchorPreviewEnabled)
-        return;
-
-    auto scene = GetOwnerScene();
-    auto cameraManager = scene ? scene->GetCameraManager() : nullptr;
-    auto movieCamera = movieCameraWeakPtr.lock();
-    auto anchor = deathWidePreviewAnchor.lock();
-    auto target = deathWidePreviewTarget.lock();
-    if (!cameraManager || !movieCamera || !anchor || !target ||
-        !cameraManager->IsUseMovie())
-        return;
-    const auto movieOwner = movieCamera->GetOwner();
-    if (!movieOwner)
-        return;
-
-    const DirectX::XMFLOAT3 eye = anchor->GetComponentLocation();
-    const DirectX::XMFLOAT3 targetPosition = target->GetComponentLocation();
-    const DirectX::XMFLOAT3 eyeToTargetVector =
-        MathHelper::Subtract(targetPosition, eye);
-    const float eyeToTargetLength = MathHelper::Length(eyeToTargetVector);
-    deathWideDebugEyeToTargetDirection = eyeToTargetLength > FLT_EPSILON
-        ? MathHelper::Normalize(eyeToTargetVector)
-        : DirectX::XMFLOAT3{};
-    const DirectX::XMFLOAT4 generatedRotation =
-        CreateDeathWideLookRotation(eye, targetPosition);
-    deathWideDebugGeneratedRotation = generatedRotation;
-    deathWideDebugRotationBefore = movieOwner->GetQuaternionRotation();
-    movieCamera->ApplyWorldPose(
-        eye,
-        generatedRotation,
-        deathWidePreviewFov);
-    deathWideDebugRotationAfter = movieOwner->GetQuaternionRotation();
-    deathWideDebugMovieForward = movieCamera->GetForward();
-    const DirectX::XMFLOAT4 componentRotation =
-        movieCamera->GetComponentRotation();
-    deathWideDebugComponentRotationAfter = componentRotation;
-    DirectX::XMVECTOR directForward = DirectX::XMVector3Rotate(
-        DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f),
-        DirectX::XMLoadFloat4(&componentRotation));
-    directForward = DirectX::XMVector3Normalize(directForward);
-    DirectX::XMStoreFloat3(&deathWideDebugDirectForward, directForward);
-    deathWideDebugForwardDot = eyeToTargetLength > FLT_EPSILON
-        ? deathWideDebugMovieForward.x * deathWideDebugEyeToTargetDirection.x +
-          deathWideDebugMovieForward.y * deathWideDebugEyeToTargetDirection.y +
-          deathWideDebugMovieForward.z * deathWideDebugEyeToTargetDirection.z
-        : 0.0f;
-    deathWideDebugDirectForwardDot = eyeToTargetLength > FLT_EPSILON
-        ? deathWideDebugDirectForward.x * deathWideDebugEyeToTargetDirection.x +
-          deathWideDebugDirectForward.y * deathWideDebugEyeToTargetDirection.y +
-          deathWideDebugDirectForward.z * deathWideDebugEyeToTargetDirection.z
-        : 0.0f;
-    deathWideDebugRotationValid = true;
-}
-
 void MovieCameraManagerActor::PlayDoorMovie()
 {
     bossEntryBattleStarted = false;
@@ -1307,7 +1055,7 @@ void MovieCameraManagerActor::PlayDoorMovie()
 
 
         DirectX::XMFLOAT3 fixedPosition = { -7.6f,-0.073f,10.16f };
-        player->SetPosition(fixedPosition); 
+        player->SetPosition(fixedPosition);
         player->rotationComponent->SetDirection({ 1.0f,0.0f,0.0f });
     }
 

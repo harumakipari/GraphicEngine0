@@ -1,33 +1,9 @@
 #pragma once
-#include <vector>
 #include "Components/Camera/CameraComponent.h"
 #include "Core/Actor.h"
 
 class MovieCameraManagerActor :public Actor
 {
-public:
-    struct DeathWideAnchorValidationDebug
-    {
-        std::string name = "None";
-        std::string reason = "Valid";
-        DirectX::XMFLOAT3 anchorPosition{};
-        DirectX::XMFLOAT3 targetPosition{};
-        float distance = 0.0f;
-        bool targetPathHit = false;
-        bool targetPathInitialOverlap = false;
-        float targetPathHitDistance = 0.0f;
-        DirectX::XMFLOAT3 targetPathHitPosition{};
-        DirectX::XMFLOAT3 targetPathHitNormal{};
-        std::string targetPathLayer = "None";
-        bool probeHit = false;
-        bool probeInitialOverlap = false;
-        DirectX::XMFLOAT3 probeStart{};
-        DirectX::XMFLOAT3 probeEnd{};
-        std::string probeLayer = "None";
-        std::string spaceProbeLayer = "None";
-        bool valid = false;
-    };
-
 private:
     enum class DoorMovieState :uint8_t
     {
@@ -91,11 +67,6 @@ public:
     }
 
     void PlayMovie(const std::string& file);
-    bool PlayDeathWideFromAnchors(
-        const std::vector<std::shared_ptr<SceneComponent>>& anchors,
-        const std::shared_ptr<SceneComponent>& target,
-        float minimumDistance = 2.0f);
-
     void PlayReverse(const std::string& file)
     {
         auto movieCamera = this->movieCameraWeakPtr.lock();
@@ -104,7 +75,6 @@ public:
     }
 
 private:
-    void UpdateDeathWideAnchorPreview();
     void HandlePrisonOpeningCameraPathCompleted();
     void UpdatePrisonOpeningPresentation(float deltaTime);
     void UpdatePrisonOpeningEyeOpening();
@@ -142,8 +112,6 @@ private:
     float prisonOpeningEyeOpenDuration = 1.f;
     float prisonOpeningFaceCloseUpKeyTime = 0.0f;
     bool prisonOpeningFaceCloseUpKeyTimeValid = false;
-    float prisonOpeningCurrentMovieTime = 0.0f;
-    float prisonOpeningCurrentEyeWeight = 0.0f;
     bool prisonOpeningEyeOverrideActive = false;
     bool prisonOpeningEyeOpeningPreview = false;
     float prisonOpeningEyeOpeningPreviewTime = 0.0f;
@@ -153,23 +121,6 @@ private:
     static constexpr const char* PrisonOpeningMoviePath = "./Data/Saves/MovieCameras/prison_opening.json";
 
     std::weak_ptr<MovieCameraComponent> movieCameraWeakPtr;
-    std::weak_ptr<SceneComponent> deathWidePreviewAnchor;
-    std::weak_ptr<SceneComponent> deathWidePreviewTarget;
-    std::string deathWidePreviewAnchorName = "None";
-    float deathWidePreviewFov = 0.0f;
-    bool deathWideAnchorPreviewEnabled = false;
-    DirectX::XMFLOAT3 deathWideDebugEyeToTargetDirection{};
-    DirectX::XMFLOAT4 deathWideDebugGeneratedRotation{};
-    DirectX::XMFLOAT4 deathWideDebugRotationBefore{};
-    DirectX::XMFLOAT4 deathWideDebugRotationAfter{};
-    DirectX::XMFLOAT4 deathWideDebugComponentRotationAfter{};
-    DirectX::XMFLOAT3 deathWideDebugMovieForward{};
-    DirectX::XMFLOAT3 deathWideDebugDirectForward{};
-    float deathWideDebugForwardDot = 0.0f;
-    float deathWideDebugDirectForwardDot = 0.0f;
-    bool deathWideDebugRotationValid = false;
-    std::vector<DeathWideAnchorValidationDebug> deathWideValidationDebug;
-    float elapsedTimer = 0.0f;
     float bossRoomZoomDuration = 3.0f;
     float bossRoomZoomTargetFovDegree = 20.0f;
     float bossRoomCameraMoveDistance = 5.0f;
