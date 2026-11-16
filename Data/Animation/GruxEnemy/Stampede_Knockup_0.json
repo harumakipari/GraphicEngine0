@@ -9,16 +9,16 @@
             "value": 1.0
         },
         {
-            "parameter": "DashAttackTelegraphFadeOut",
-            "time": 0.550000011920929,
-            "type": "GameplayEvent",
-            "value": 1.0
-        },
-        {
             "parameter": "enemy_attack2",
             "time": 0.2667885422706604,
             "type": "PlaySE",
             "value": 0.5400000214576721
+        },
+        {
+            "parameter": "DashAttackTelegraphFadeOut",
+            "time": 0.550000011920929,
+            "type": "GameplayEvent",
+            "value": 1.0
         }
     ],
     "loop": false,
@@ -98,11 +98,11 @@
         {
             "endTime": 0.5473132729530334,
             "hitBoxOffset": [
-                -0.3799999952316284,
-                0.0,
-                0.0
+                0.14000000059604645,
+                0.03999999910593033,
+                -0.12999999523162842
             ],
-            "hitBoxRadius": 1.2999999523162842,
+            "hitBoxRadius": 0.8700000047683716,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,

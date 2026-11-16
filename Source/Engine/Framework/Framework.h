@@ -48,11 +48,8 @@ CONST LPCWSTR APPLICATION_NAME{ L"VeilOfAurora" };
 class Framework
 {
 public:
-
 #ifdef USE_IMGUI
-
     ImFont* fontJP;
-
 #endif
     CONST HWND hwnd;
 
@@ -80,7 +77,7 @@ public:
         ImGui::CreateContext();
         ImGui::GetIO().Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\consola.ttf", 14.0f, nullptr, glyphRangesJapanese);
         // 日本語用（メイリオ or MSゴシック）
-         fontJP = ImGui::GetIO().Fonts->AddFontFromFileTTF(
+        fontJP = ImGui::GetIO().Fonts->AddFontFromFileTTF(
             "C:\\Windows\\Fonts\\meiryo.ttc",
             16.0f,
             nullptr,
@@ -113,27 +110,27 @@ public:
                     tictoc.Tick();
                     {
                         TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "GPU Frame");
-                calculate_frame_stats();
+                        calculate_frame_stats();
 
 #ifdef USE_IMGUI
-                ImGui_ImplDX11_NewFrame();
-                ImGui_ImplWin32_NewFrame();
-                ImGui::NewFrame();
+                        ImGui_ImplDX11_NewFrame();
+                        ImGui_ImplWin32_NewFrame();
+                        ImGui::NewFrame();
 #endif
-                bool skipRendering = Update(tictoc.DeltaTime());
-                Render(tictoc.DeltaTime(), skipRendering);
+                        bool skipRendering = Update(tictoc.DeltaTime());
+                        Render(tictoc.DeltaTime(), skipRendering);
 #ifdef USE_IMGUI
-                {
-                    ZoneScopedN("ImGui Render CPU");
-                    TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "ImGui UI");
-                    ImGui::Render();
-                    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-                }
+                        {
+                            ZoneScopedN("ImGui Render CPU");
+                            TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "ImGui UI");
+                            ImGui::Render();
+                            ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+                        }
 #endif
                     }
-                UINT sync_interval{ 0 };
-                Graphics::Present(sync_interval);
-                Graphics::CollectTracyD3D11();
+                    UINT sync_interval{ 0 };
+                    Graphics::Present(sync_interval);
+                    Graphics::CollectTracyD3D11();
                 }
                 FrameMark;
             }
@@ -199,7 +196,7 @@ public:
         isPaused = pause;
     }
 
-    enum class EditorDisplayMode
+    enum class EditorDisplayMode :uint8_t
     {
         Normal,
         AnimationEditorOnly,

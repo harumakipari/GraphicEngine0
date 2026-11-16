@@ -960,11 +960,11 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
     </FxCompile>
-    <FxCompile Include="Shader\sprite_ps.hlsl">
+    <FxCompile Include="Shader\SpritePS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="Shader\sprite_vs.hlsl">
+    <FxCompile Include="Shader\SpriteVS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
@@ -1045,7 +1045,7 @@
     <None Include="Shader\ShaderFunctions.hlsli" />
     <None Include="Shader\SkyMap.hlsli" />
     <None Include="Shader\SolidShapeRenderer.hlsli" />
-    <None Include="Shader\sprite.hlsli" />
+    <None Include="Shader\Sprite.hlsli" />
     <None Include="Shader\Trail.hlsli" />
     <None Include="Shader\ViewConstants.hlsli" />
     <None Include="Shader\WiredShapeRenderer.hlsli" />

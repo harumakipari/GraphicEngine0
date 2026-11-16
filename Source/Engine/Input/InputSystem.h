@@ -11,7 +11,6 @@
 #include <string>
 #include <vector>
 
-
 enum class InputDeviceType:uint8_t
 {
     Keyboard, Mouse, Gamepad

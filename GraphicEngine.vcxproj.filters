@@ -1166,10 +1166,10 @@
     <FxCompile Include="Shader\SolidShapeRendererVS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Shader\sprite_ps.hlsl">
+    <FxCompile Include="Shader\SpritePS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Shader\sprite_vs.hlsl">
+    <FxCompile Include="Shader\SpriteVS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Shader\SSRPS.hlsl">
@@ -1273,7 +1273,7 @@
     <None Include="Shader\SolidShapeRenderer.hlsli">
       <Filter>Shader</Filter>
     </None>
-    <None Include="Shader\sprite.hlsli">
+    <None Include="Shader\Sprite.hlsli">
       <Filter>Shader</Filter>
     </None>
     <None Include="Shader\Trail.hlsli">

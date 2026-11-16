@@ -1,4 +1,4 @@
-#include "sprite.hlsli"
+#include "Sprite.hlsli"
 
 Texture2D colorMap : register(t0);
 SamplerState pointSamplerState : register(s0);

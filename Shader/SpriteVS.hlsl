@@ -1,4 +1,4 @@
-#include "sprite.hlsli"
+#include "Sprite.hlsli"
 
 VS_OUT main(float4 pos : POSITION, float4 color : COLOR,float2 texcoord:TEXCOORD)
 {

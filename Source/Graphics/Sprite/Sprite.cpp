@@ -54,73 +54,16 @@ Sprite::Sprite(ID3D11Device* device, const wchar_t* filename)
     };
 
     //頂点シェーダーオブジェクトを生成
-    hr = CreateVsFromCSO(device, "./Data/Shaders/sprite_vs.cso", vertex_shader.ReleaseAndGetAddressOf(), input_layout.ReleaseAndGetAddressOf(), input_element_desc, _countof(input_element_desc));
+    hr = CreateVsFromCSO(device, "./Data/Shaders/SpriteVS.cso", vertex_shader.ReleaseAndGetAddressOf(), input_layout.ReleaseAndGetAddressOf(), input_element_desc, _countof(input_element_desc));
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     //ピクセルシェーダーオブジェクトを生成
-    hr = CreatePsFromCSO(device, "./Data/Shaders/sprite_ps.cso", pixel_shader.ReleaseAndGetAddressOf());
+    hr = CreatePsFromCSO(device, "./Data/Shaders/SpritePS.cso", pixel_shader.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     //テクスチャのロード
     hr = LoadTextureFromFile(device, filename, shaderResourceView.ReleaseAndGetAddressOf(), &texture2dDesc);
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-
-#if 0//以前の
-    //頂点シェーダーオブジェクトを生成
-    {
-        const char* cso_name{ "sprite_vs.cso" };
-
-        FILE* fp{};
-        fopen_s(&fp, cso_name, "rb");
-        _ASSERT_EXPR_A(fp, "CSO File not found");
-
-        fseek(fp, 0, SEEK_END);
-        long cso_sz{ ftell(fp) };
-        fseek(fp, 0, SEEK_SET);
-
-        std::unique_ptr<unsigned char[]> cso_data{ std::make_unique<unsigned char[]>(cso_sz) };
-        fread(cso_data.get(), cso_sz, 1, fp);
-        fclose(fp);
-        hr = device->CreateVertexShader(cso_data.get(), cso_sz, nullptr, &vertex_shader);
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-        //HRESULT hr{ S_OK };
-        hr = device->CreateInputLayout(input_element_desc, _countof(input_element_desc),
-            cso_data.get(), cso_sz, &input_layout);
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    }
-    //ピクセルシェーダーオブジェクトの生成
-    {
-        const char* cso_name{ "sprite_ps.cso" };
-
-        FILE* fp{};
-        fopen_s(&fp, cso_name, "rb");
-        _ASSERT_EXPR_A(fp, "CSO File not found");
-
-        fseek(fp, 0, SEEK_END);
-        long cso_sz{ ftell(fp) };
-        fseek(fp, 0, SEEK_SET);
-
-        std::unique_ptr<unsigned char[]> cso_data{ std::make_unique<unsigned char[]>(cso_sz) };
-        fread(cso_data.get(), cso_sz, 1, fp);
-        fclose(fp);
-        hr = device->CreatePixelShader(cso_data.get(), cso_sz, nullptr, &pixel_shader);
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    }
-    //画像ファイルのロードとシェーダーリソースビューオブジェクト生成
-    ID3D11Resource* resource{};
-    hr = DirectX::CreateWICTextureFromFile(device, filename, &resource, &shaderResourceView);
-    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    resource->Release();
-
-    //テクスチャ情報(D3D11_TEXTURE2D_DESC)の取得
-    ID3D11Texture2D* texture2d{};
-    hr = resource->QueryInterface<ID3D11Texture2D>(&texture2d);
-    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    texture2d->GetDesc(&texture2dDesc);
-    texture2d->Release();
-#endif
 }
 
 Sprite::~Sprite()
