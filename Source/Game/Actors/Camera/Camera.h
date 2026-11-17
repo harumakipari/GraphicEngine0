@@ -121,43 +121,20 @@ public:
     //更新処理
     void Update(float deltaTime)override;
 
-    void Shake(float power = 0.02f, float time = 0.2f)
-    {
-        //mainCameraComponent->Shake(power, time);
-    }
     void DrawImGuiDetails()override;
 
     DirectX::XMFLOAT3 CameraForwardXZ() const
     {
-#if 0
-        float yaw = mainCameraComponent->GetYaw();
-
-        return {
-            sinf(yaw),
-            0.0f,
-            cosf(yaw)
-        };
-#else
         auto forward = mainCameraComponent->GetForward();
         forward.y = 0.0f;
         return MathHelper::Normalize(forward);
-#endif // 0
     }
 
     DirectX::XMFLOAT3 CameraRightXZ() const
     {
-#if 0
-        float yaw = mainCameraComponent->GetYaw();
-        return {
-            cosf(yaw),
-            0.0f,
-            -sinf(yaw)
-        };
-#else
         auto right = mainCameraComponent->GetRight();
         right.y = 0.0f;
         return MathHelper::Normalize(right);
-#endif
     }
 
     void SetLockTarget(const std::shared_ptr<SceneComponent>& target)
@@ -191,8 +168,7 @@ public:
     void Initialize(const Transform& transform)override
     {
         Camera::Initialize(transform);
-        tpsController.camera =
-            static_cast<TPSCameraComponent*>(mainCameraComponent.get());
+        tpsController.camera = static_cast<TPSCameraComponent*>(mainCameraComponent.get());
         // FixedCamera ではレイキャストを使わない
         tpsController.useRaycast = false;
 
@@ -223,25 +199,6 @@ public:
         useMovie = use;
     }
 
-    void Shake(float power = 0.02f, float time = 0.2f)
-    {
-        //mainCameraComponent->Shake(power, time);
-    }
-    void DrawImGuiDetails()override
-    {
-#ifdef USE_IMGUI
-        if (ImGui::Button(U8("カメラ動く")))
-        {
-            Play(2.0f);
-        }
-
-        if (ImGui::Button(U8("カメラ戻る")))
-        {
-            PlayReverse(2.0f);
-        }
-
-#endif
-    }
 
     DirectX::XMFLOAT3 CameraForwardXZ() const
     {

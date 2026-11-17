@@ -38,20 +38,20 @@ void Player::Initialize(const Transform& transform)
     {
         PROFILE_SCOPE("Create PlayerStateMachine");
         // ステートマシンを作成
-        stateMachine_ = std::make_shared<StateMachine>();
-        stateMachine_->RegisterState(std::make_unique<PlayerIdleState>(this));
-        stateMachine_->RegisterState(std::make_unique<PlayerRunningState>(this));
-        stateMachine_->RegisterState(std::make_unique<PlayerAttackState>(this));
-        stateMachine_->RegisterState(std::make_unique<PlayerDodgeState>(this));
-        stateMachine_->RegisterState(std::make_unique<PlayerDamageState>(this));
-        stateMachine_->RegisterState(std::make_unique<PlayerKnockBackState>(this));
-        stateMachine_->RegisterState(std::make_unique<PlayerDeathPendingState>(this));
-        stateMachine_->RegisterState(std::make_unique<PlayerDeathState>(this));
-        stateMachine_->RegisterState(std::make_unique<PlayerWinState>(this));
-        stateMachine_->RegisterState(std::make_unique<PlayerRushState>(this));
+        stateMachine = std::make_shared<StateMachine>();
+        stateMachine->RegisterState(std::make_unique<PlayerIdleState>(this));
+        stateMachine->RegisterState(std::make_unique<PlayerRunningState>(this));
+        stateMachine->RegisterState(std::make_unique<PlayerAttackState>(this));
+        stateMachine->RegisterState(std::make_unique<PlayerDodgeState>(this));
+        stateMachine->RegisterState(std::make_unique<PlayerDamageState>(this));
+        stateMachine->RegisterState(std::make_unique<PlayerKnockBackState>(this));
+        stateMachine->RegisterState(std::make_unique<PlayerDeathPendingState>(this));
+        stateMachine->RegisterState(std::make_unique<PlayerDeathState>(this));
+        stateMachine->RegisterState(std::make_unique<PlayerWinState>(this));
+        stateMachine->RegisterState(std::make_unique<PlayerRushState>(this));
 
         // 初期ステートを設定
-        stateMachine_->ChangeState("Idle");
+        stateMachine->ChangeState("Idle");
     }
 
     {
@@ -501,8 +501,8 @@ void Player::Update(float deltaTime)
     // フレーム開始時からFinalHit待機中なら、攻撃終了処理・姿勢・武器表示を更新する。
     if (finalHitWaiting)
     {
-        if (finalHitAttackDrainActive && stateMachine_)
-            stateMachine_->Update(deltaTime);
+        if (finalHitAttackDrainActive && stateMachine)
+            stateMachine->Update(deltaTime);
         if (const auto controller = GetBodyAnimationController())
             controller->OnUpdate(deltaTime);
 
@@ -819,7 +819,7 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         prevSwordMidPos = GetHitBoxPoint(swordMiddleComponent, activeHitBoxOffset);
         prevSwordTipPos = GetHitBoxPoint(swordTipComponent, activeHitBoxOffset);
         hitBox = true;
-        if (std::string(stateMachine_->GetStateName()) == "Attack")
+        if (std::string(stateMachine->GetStateName()) == "Attack")
             attackRotationTracking = false;
         break;
     }
@@ -865,7 +865,7 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         float playerRadius = 0.0f;
         float enemyRadius = 0.0f;
 
-        if (std::string(stateMachine_->GetStateName()) == "Attack")
+        if (std::string(stateMachine->GetStateName()) == "Attack")
         {
             if (const auto target = attackTarget.lock())
             {
@@ -968,7 +968,7 @@ void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     case AnimationNotifyEvent::Type::SpawnEffect:
         break;
     case AnimationNotifyEvent::Type::GameplayEvent:
-        if (event.parameter == "DeathCameraStart" && stateMachine_ && std::string(stateMachine_->GetStateName()) == "Death")
+        if (event.parameter == "DeathCameraStart" && stateMachine && std::string(stateMachine->GetStateName()) == "Death")
         {
             if (deathCameraStartCallback)
             {
@@ -1281,8 +1281,8 @@ void Player::EndPrisonOpeningSitting()
             controller->ReleaseHeldAnimationPose(true);
         controller->ResetAnimationRate();
     }
-    if (stateMachine_)
-        stateMachine_->ChangeState("Idle");
+    if (stateMachine)
+        stateMachine->ChangeState("Idle");
     EndEvent();
     InputSystem::SetInputEnabled(prisonOpeningInputWasEnabled);
 }
@@ -1507,8 +1507,8 @@ void Player::ResetForBattleContinue(const Transform& battleStartTransform)
     SetScale(battleStartTransform.GetScale());
     UpdateAllComponentTransforms();
 
-    if (stateMachine_)
-        stateMachine_->ChangeState("Idle");
+    if (stateMachine)
+        stateMachine->ChangeState("Idle");
 
     if (const auto controller = GetBodyAnimationController())
     {
@@ -1579,12 +1579,12 @@ bool Player::BeginFinalHitWait()
     finalHitAttackDrainActive = false;
     finalHitAttackDrainCompleted = false;
     const auto controller = GetBodyAnimationController();
-    const std::string stateName = stateMachine_ ? stateMachine_->GetStateName() : "";
+    const std::string stateName = stateMachine ? stateMachine->GetStateName() : "";
     const bool supportedAttackState = stateName == "Attack" || stateName == "Rush";
     const std::string animationName = controller
         ? controller->GetCurrentAnimationName() : std::string{};
-    const auto* rushState = stateMachine_ && stateName == "Rush"
-        ? dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState()) : nullptr;
+    const auto* rushState = stateMachine && stateName == "Rush"
+        ? dynamic_cast<const PlayerRushState*>(stateMachine->GetCurrentState()) : nullptr;
     const std::string rushAttackAnimation = rushState
         ? rushState->GetCurrentAttackAnimation() : std::string{};
     const bool expectedAttackClip = stateName == "Attack"
@@ -1642,8 +1642,8 @@ void Player::ResumeBattleActionsAfterEvent()
 {
     battleActionsSuspended = false;
     ResetTimeScale();
-    if (stateMachine_)
-        stateMachine_->ChangeState("Idle");
+    if (stateMachine)
+        stateMachine->ChangeState("Idle");
 }
 
 bool Player::IsFinalHitAttackDrainComplete() const
@@ -1652,9 +1652,9 @@ bool Player::IsFinalHitAttackDrainComplete() const
         return true;
     if (!finalHitAttackDrainCompleted)
         return false;
-    if (!stateMachine_)
+    if (!stateMachine)
         return true;
-    const std::string stateName = stateMachine_->GetStateName();
+    const std::string stateName = stateMachine->GetStateName();
     return stateName != "Attack" && stateName != "Rush";
 }
 
@@ -1739,8 +1739,8 @@ void Player::CancelGameplayActionsForCinematic()
     rushTarget.reset();
     locomotionMode = LocomotionMode::Idle;
     HideAndResetLockOnGuideUI();
-    if (stateMachine_)
-        stateMachine_->ChangeState("Idle");
+    if (stateMachine)
+        stateMachine->ChangeState("Idle");
     if (const auto controller = GetBodyAnimationController())
     {
         controller->ReleaseHeldAnimationPose();
@@ -1768,12 +1768,12 @@ void Player::EnterWinState()
 {
     finalHitWaiting = false;
     battleActionsSuspended = false;
-    if (stateMachine_)
-        stateMachine_->ChangeState("Win");
+    if (stateMachine)
+        stateMachine->ChangeState("Win");
 }
 bool Player::IsInWinState() const
 {
-    return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Win";
+    return stateMachine && std::string(stateMachine->GetStateName()) == "Win";
 }
 // 軌跡を描画する処理
 void Player::RenderTrail(ID3D11DeviceContext* immediateContext)
@@ -1897,9 +1897,9 @@ bool Player::TryExecuteActionRequest()
     }
 
     // 要求されたアクションのStateへ遷移する
-    stateMachine_->ChangeState(targetState);
+    stateMachine->ChangeState(targetState);
 
-    if (stateMachine_->GetStateName() != targetState)
+    if (stateMachine->GetStateName() != targetState)
     {
         return false;
     }
@@ -1928,7 +1928,7 @@ void Player::ConsumeActionRequest(ActionType expectedType)
 bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition, const DamagePolicy policy)
 {
     if (finalHitWaiting) return false;
-    const std::string currentState = stateMachine_->GetStateName();
+    const std::string currentState = stateMachine->GetStateName();
     const bool ignoreDodgeIFrames = policy == DamagePolicy::IgnoreDodgeIFrames && currentState == "Dodge";
     if (invincibleWindow && !ignoreDodgeIFrames)
     {
@@ -2015,15 +2015,15 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
         }
     }
     const char* targetState = hp > 0 ? "Damage" : "DeathPending";
-    stateMachine_->ChangeState(targetState);
+    stateMachine->ChangeState(targetState);
     return true;
 }
 
 bool Player::StartKnockBack(const DirectX::XMFLOAT3& direction)
 {
-    if (!stateMachine_ || hp <= 0 ||
-        std::string(stateMachine_->GetStateName()) == "DeathPending" ||
-        std::string(stateMachine_->GetStateName()) == "Death")
+    if (!stateMachine || hp <= 0 ||
+        std::string(stateMachine->GetStateName()) == "DeathPending" ||
+        std::string(stateMachine->GetStateName()) == "Death")
     {
         return false;
     }
@@ -2040,16 +2040,16 @@ bool Player::StartKnockBack(const DirectX::XMFLOAT3& direction)
 
     knockBackDirection = MathHelper::Normalize(horizontalDirection);
     SetRushInputAcceptance(false);
-    stateMachine_->ChangeState("KnockBack");
+    stateMachine->ChangeState("KnockBack");
     return true;
 }
 
 bool Player::IsBossAttackTargetAvailable() const
 {
-    if (!stateMachine_ || hp <= 0 || IsPendingKill())
+    if (!stateMachine || hp <= 0 || IsPendingKill())
         return false;
 
-    const State* currentState = stateMachine_->GetCurrentState();
+    const State* currentState = stateMachine->GetCurrentState();
     if (!currentState)
         return false;
 
@@ -2108,7 +2108,7 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
 
 bool Player::CanAcceptInitialRushInput() const
 {
-    return rushInputAccepting && justDodgeSuccess && stateMachine_ && std::string(stateMachine_->GetStateName()) == "Dodge" && !rushTarget.expired();
+    return rushInputAccepting && justDodgeSuccess && stateMachine && std::string(stateMachine->GetStateName()) == "Dodge" && !rushTarget.expired();
 }
 
 void Player::LatchFinalHitVisualPoseAfterAnimationUpdate()
@@ -2129,16 +2129,16 @@ void Player::LatchFinalHitVisualPoseAfterAnimationUpdate()
 
 bool Player::CanShowInitialRushGuide() const
 {
-    return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Dodge" && justDodgeSuccess && !rushTarget.expired();
+    return stateMachine && std::string(stateMachine->GetStateName()) == "Dodge" && justDodgeSuccess && !rushTarget.expired();
 }
 
 
 bool Player::IsRushOpportunityActive() const
 {
-    if (!stateMachine_ || rushTarget.expired())
+    if (!stateMachine || rushTarget.expired())
         return false;
 
-    const std::string stateName = stateMachine_->GetStateName();
+    const std::string stateName = stateMachine->GetStateName();
     return (stateName == "Dodge" && justDodgeSuccess) || stateName == "Rush";
 }
 
@@ -2434,10 +2434,10 @@ void Player::HandleAnimationPlaySE(const AnimationNotifyEvent& event) const
     std::string soundName = event.parameter;
     if (event.parameter == "RushSword")
     {
-        if (std::string(stateMachine_->GetStateName()) != "Rush")
+        if (std::string(stateMachine->GetStateName()) != "Rush")
             return;
 
-        const auto* rushState = dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState());
+        const auto* rushState = dynamic_cast<const PlayerRushState*>(stateMachine->GetCurrentState());
         if (!rushState)
             return;
 
@@ -2546,8 +2546,8 @@ void Player::UpdateSwordHitDetection(const DirectX::XMFLOAT3& playerPos, const D
             const HitResultWithActor& hit = selectedHit->result;
             if (!hitActors.contains(hit.actor))
             {
-                const bool isRushHit = stateMachine_ &&
-                    std::string(stateMachine_->GetStateName()) == "Rush";
+                const bool isRushHit = stateMachine &&
+                    std::string(stateMachine->GetStateName()) == "Rush";
                 if (auto enemy = dynamic_cast<GruxEnemy*>(hit.actor))
                 {
                     const int previousHP = enemy->GetHp();
@@ -2559,7 +2559,7 @@ void Player::UpdateSwordHitDetection(const DirectX::XMFLOAT3& playerPos, const D
                     if (isRushHit)
                     {
                         const auto* rushState = dynamic_cast<const PlayerRushState*>(
-                            stateMachine_->GetCurrentState());
+                            stateMachine->GetCurrentState());
                         hitType = rushState &&
                             rushState->GetComboIndex() + 1 >= GetMaxRushAttackCount()
                             ? GruxEnemy::PlayerAttackHitType::RushFinal
@@ -2610,7 +2610,7 @@ void Player::CaptureActionRequest(float deltaTime)
     constexpr float dodgeInputBufferSeconds = 0.3f;
     constexpr float attackInputBufferSeconds = 0.5f;
 
-    const std::string currentState = stateMachine_->GetStateName();
+    const std::string currentState = stateMachine->GetStateName();
     if (currentState == "Damage" || currentState == "KnockBack" ||
         currentState == "DeathPending" || currentState == "Death")
     {
@@ -3368,11 +3368,11 @@ void Player::RefreshOperationGuideUIVisibility() const
 
 float Player::GetRushDamageMultiplier() const
 {
-    if (!stateMachine_ || std::string(stateMachine_->GetStateName()) != "Rush")
+    if (!stateMachine || std::string(stateMachine->GetStateName()) != "Rush")
         return 1.0f;
 
     const auto* rushState =
-        dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState());
+        dynamic_cast<const PlayerRushState*>(stateMachine->GetCurrentState());
     if (!rushState)
         return 1.0f;
 
@@ -3386,7 +3386,7 @@ float Player::GetRushDamageMultiplier() const
 int Player::GetCurrentAttackDamage() const
 {
     const int baseDamage = (std::max)(0, normalAttackDamage);
-    if (!stateMachine_ || std::string(stateMachine_->GetStateName()) != "Rush")
+    if (!stateMachine || std::string(stateMachine->GetStateName()) != "Rush")
         return baseDamage;
 
     return static_cast<int>(std::lround(

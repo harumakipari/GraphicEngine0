@@ -5,22 +5,12 @@
 #include <d3d11.h>
 #include <wrl.h>
 
-#include "Graphics/PostProcess/FullScreenQuad.h"
 #include "Graphics/Core/ConstantBuffer.h"
-#include "Graphics/Sprite/Sprite.h"
-#include "Graphics/Core/Shader.h"
-#include "Graphics/Core/RenderState.h"
 #include "Graphics/Resource/ShaderToy.h"
-
-#include "Graphics/Environment/SkyMap.h"
-#include "Graphics/Shadow/CascadeShadowMap.h"
-#include "Graphics/PostProcess/MultipleRenderTargets.h"
-
 #include "Core/Actor.h"
-#include "Core/ActorManager.h"
 #include "Engine/Scene/SceneBase.h"
+#include "Game/Actors/Camera/Camera.h"
 
-#include "Game/Actors/Camera/LoadingCamera.h"
 
 class LoadingScene : public SceneBase
 {
@@ -61,7 +51,6 @@ private:
 
     Microsoft::WRL::ComPtr<ID3D11PixelShader> loadingPs;
 
-    // LoadingPS-only parameters. Keep this animation tuning out of shared scene constants.
     struct LoadingParticleConstants
     {
         float spawnOutsideDistance = 0.65f;
@@ -86,7 +75,6 @@ private:
     };
     std::unique_ptr<ConstantBuffer<LoadingParticleConstants>> loadingParticleCBuffer;
 
-    // ImGui targets are smoothed before they reach the shader so resizing the orbit keeps its motion continuous.
     float particleOrbitCenterX = 0.0f;
     float particleOrbitCenterY = 0.0f;
     float particleOrbitRadiusX = 0.35f;
@@ -111,7 +99,6 @@ private:
     float fadeOutDuration = 0.60f;
     bool blackFrameRendered = false;
 
-    // UI design-space position and independent scale; equal X/Y preserves the aspect ratio.
     DirectX::XMFLOAT2 logoPosition = { 960.0f, 540.0f };
     DirectX::XMFLOAT2 logoScale = { 0.4f, 0.96f };
     std::shared_ptr<UIImageComponent> imageUiComponent;

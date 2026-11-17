@@ -5,7 +5,6 @@
 #include "Core/Actor.h"
 #include "Graphics/Resource/GeometricPrimitive.h"
 
-#include "Components/Render/MeshComponent.h"
 #include "Components/CollisionShape/CollisionComponent.h"
 #include "Animation/AnimationController.h"
 #include "Game/State/StateMachine.h"
@@ -14,66 +13,25 @@ class Character :public Actor
 {
 public:
     Character() = default;
-    virtual ~Character() = default;
+    ~Character() override = default;
 
     Character(const std::string& modelName) :Actor(modelName)
     {
         animationBodyControllerName = "Body";
     }
 
-    bool IsAnimationEditorPreviewActive() const
-    {
-        for (const auto& controller : animationControllers | std::views::values)
-        {
-            if (controller && controller->IsEditorPreviewActive())
-                return true;
-        }
-        return false;
-    }
+    void Update(const float deltaTime)override;
 
-    virtual void Update(float deltaTime)override
-    {
-        // front,up,rightを更新する
-        UpdateDirectionVectors();
-
-        const bool editorPreviewActive = IsAnimationEditorPreviewActive();
-        if (stateMachine_ && !editorPreviewActive)
-        {
-            stateMachine_->Update(deltaTime);
-        }
-
-        // Preview対象ActorだけLocomotionによるAnimation要求も停止する。
-        if (!editorPreviewActive)
-            UpdateLocomotionAnimation();
-
-        for (auto& controller : animationControllers | std::views::values)
-        {
-            controller->OnUpdate(deltaTime);
-        }
-
-    };
+    bool IsAnimationEditorPreviewActive() const;
 
     // ステートマシンをセットする
-    void SetStateMachine(const std::shared_ptr<StateMachine>& stateMachine)
-    {
-        stateMachine_ = stateMachine;
-    }
+    void SetStateMachine(const std::shared_ptr<StateMachine>& stateMachine);
 
     // ステートマシンを取得する
-    std::shared_ptr<StateMachine> GetStateMachine()
-    {
-        return stateMachine_;
-    }
+    std::shared_ptr<StateMachine> GetStateMachine();
 
     // 使用
-    void PlayBodyAnimation(const std::string& name, const bool loop = true, bool blend = true, float blendTime = 0.3f, const bool ignoreRootMotion = false) const
-    {
-        if (const auto controller = GetAnimationController(animationBodyControllerName))
-        {
-            controller->ResetRootMotion(name, loop, blend, blendTime);
-            controller->SetIgnoreRootMotion(ignoreRootMotion);
-        }
-    }
+    virtual void PlayBodyAnimation(const std::string& name, const bool loop = true, const bool blend = true, const float blendTime = 0.3f, const bool ignoreRootMotion = false) const;
 
     // ブレンドスペースのアニメーションを使用するかの更新関数
     virtual void UpdateLocomotionAnimation() {}
@@ -133,16 +91,10 @@ public:
     int GetHp() const { return hp; }
 
     //進行方向の単位ベクトルを取得する
-    const DirectX::XMFLOAT3& GetForward() const
-    {
-        return front;
-    }
+    const DirectX::XMFLOAT3& GetForward() const { return front; }
 
     // 右方向の単位ベクトルを取得する
-    const DirectX::XMFLOAT3& GetRight()
-    {
-        return right;
-    }
+    const DirectX::XMFLOAT3& GetRight() { return right; }
 
     const DirectX::XMFLOAT3& GetUp() { return up; }
 
@@ -172,9 +124,9 @@ public:
     {
 #ifdef USE_IMGUI
         DrawAnimationEditorImGui();
-        if (stateMachine_)
+        if (stateMachine)
         {
-            stateMachine_->DrawImGui();
+            stateMachine->DrawImGui();
         }
 #endif
     }
@@ -242,7 +194,7 @@ protected:
 
 
     // ステートマシン
-    std::shared_ptr<StateMachine> stateMachine_;
+    std::shared_ptr<StateMachine> stateMachine;
 
     bool canMove = true;
 

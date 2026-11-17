@@ -2,7 +2,6 @@
 #include "json.hpp"
 #include <fstream>
 #include <string>
-#include <map>
 
 using json = nlohmann::json;
 
@@ -19,9 +18,6 @@ public:
 
 	static bool LoadJsonFromFile(json& j, const std::string& filePath)
     {
-
-		//_ASSERT_EXPR(std::filesystem::exists(std::filesystem::path(filePath)), "ファイルを開けませんでした: " + filePath);
-
 		//ファイルが存在しなかったら、新規作成
 		if (!std::filesystem::exists(std::filesystem::path(filePath))) {
 			std::ofstream ofs(filePath);

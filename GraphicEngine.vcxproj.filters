@@ -618,9 +618,6 @@
     <ClInclude Include="Source\Game\Actors\Camera\DarkGameCamera.h">
       <Filter>Source\Game\Actors\Camera</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Game\Actors\Camera\LoadingCamera.h">
-      <Filter>Source\Game\Actors\Camera</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Game\Actors\Enemy\Enemy.h">
       <Filter>Source\Game\Actors\Enemy</Filter>
     </ClInclude>

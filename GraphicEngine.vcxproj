@@ -458,7 +458,6 @@
     <ClInclude Include="Source\Game\Actors\BgmActor.h" />
     <ClInclude Include="Source\Game\Actors\Camera\Camera.h" />
     <ClInclude Include="Source\Game\Actors\Camera\DarkGameCamera.h" />
-    <ClInclude Include="Source\Game\Actors\Camera\LoadingCamera.h" />
     <ClInclude Include="Source\Game\Actors\Enemy\Boss\BossAITypes.h" />
     <ClInclude Include="Source\Game\Actors\Enemy\Enemy.h" />
     <ClInclude Include="Source\Game\Actors\Player\Player.h" />

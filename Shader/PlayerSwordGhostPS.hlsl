@@ -15,13 +15,9 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
 
     float fresnel = pow(1.0 - saturate(dot(N, V)), modelEffectParameter.edgeWidth);
 
-    float3 innerColor = modelEffectParameter.innerColor;
     float3 edgeColor = modelEffectParameter.edgeColor;
 
-    
-    float3 finalColor = cpuColor.rgb * emissionPower;
-
-    finalColor = float3(edgeColor) * fresnel * emissionPower;
+    float3 finalColor = float3(edgeColor) * fresnel * emissionPower;
 
     float pulse = 0.9 + 0.1 * sin(elapsedTime * 10.0);
     finalColor *= pulse;

@@ -9,18 +9,11 @@
 #include <algorithm>
 #include "tiny_gltf.h"
 
-#ifdef USE_IMGUI
-#define IMGUI_ENABLE_DOCKING
-#include "../External/imgui/imgui.h"
-#endif
-
 #include "Engine/Utility/Win32Utils.h"
-#include "Engine/Debug/DebugRender.h"
 #include "Engine/Serialization/DirectXSerializers.h"
 #include "Graphics/Core/Shader.h"
 #include "Graphics/Resource/Texture.h"
 #include "Graphics/Core/RenderState.h"
-#include "Graphics/Core/PipelineState.h"
 #include "Graphics/Core/GltfDxgiHelper.h"
 #include "Graphics/Core/Graphics.h"
 #include "Math/MathHelper.h"
@@ -838,18 +831,7 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
         }
     }
 
-    for (const auto& mesh : meshes)
-    {
-        for (const auto& primitive : mesh.primitives)
-        {
-            Logger::Log(Logger::LogCategory::System, std::format(
-                "[Cloth][Init] vertices={} indices={} indexFormat={} vertexStride={} edgeRecords={}",
-                primitive.cachedVertices.size(), primitive.indexCount,
-                primitive.indexBufferView.format == DXGI_FORMAT_R16_UINT ? "R16_UINT" :
-                primitive.indexBufferView.format == DXGI_FORMAT_R32_UINT ? "R32_UINT" : "UNKNOWN",
-                sizeof(Mesh::Vertex), primitive.finalEdges.size()));
-        }
-    }
+
 }
 
 const char* ClothSimulate::GetSimulationStageName() const
@@ -1326,26 +1308,9 @@ void ClothSimulate::Render(ID3D11DeviceContext* immediateContext, const DirectX:
 
                 immediateContext->VSSetConstantBuffers(0, 1, graphicsPrimitiveCbuffer.GetAddressOf());
                 immediateContext->PSSetConstantBuffers(0, 1, graphicsPrimitiveCbuffer.GetAddressOf());
-                //Simulate(immediateContext);
-
 
                 const Material& material = materials.at(primitive.material);
 
-                static bool loggedFirstDraw = false;
-                if (!loggedFirstDraw)
-                {
-                    Logger::Log(Logger::LogCategory::System, std::format(
-                        "[Cloth][Draw] vertices={} indices={} indexFormat={} vertexStride={} simulation={} cullDisabled={} world=[{:.3f},{:.3f},{:.3f},{:.3f}; {:.3f},{:.3f},{:.3f},{:.3f}; {:.3f},{:.3f},{:.3f},{:.3f}; {:.3f},{:.3f},{:.3f},{:.3f}]",
-                        primitive.cachedVertices.size(), primitive.indexCount,
-                        primitive.indexBufferView.format == DXGI_FORMAT_R16_UINT ? "R16_UINT" :
-                        primitive.indexBufferView.format == DXGI_FORMAT_R32_UINT ? "R32_UINT" : "UNKNOWN",
-                        stride, simulationStage != SimulationStage::InitialMesh, disableCulling,
-                        computePrimitiveData.world._11, computePrimitiveData.world._12, computePrimitiveData.world._13, computePrimitiveData.world._14,
-                        computePrimitiveData.world._21, computePrimitiveData.world._22, computePrimitiveData.world._23, computePrimitiveData.world._24,
-                        computePrimitiveData.world._31, computePrimitiveData.world._32, computePrimitiveData.world._33, computePrimitiveData.world._34,
-                        computePrimitiveData.world._41, computePrimitiveData.world._42, computePrimitiveData.world._43, computePrimitiveData.world._44));
-                    loggedFirstDraw = true;
-                }
                 const int textureIndices[] =
                 {
                     material.data.pbrMetallicRoughness.basecolorTexture.index,

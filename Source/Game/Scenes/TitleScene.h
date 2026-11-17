@@ -3,13 +3,11 @@
 #include "Engine/Scene/Scene.h"
 
 #include <d3d11.h>
-#include <wrl.h>
 #include <memory>
 
-#include "Core/ActorManager.h"
 #include "Engine/Scene/SceneBase.h"
 #include "Game/Actors/BgmActor.h"
-#include "Game/Actors/Camera/LoadingCamera.h"
+#include "Game/Actors/Camera/Camera.h"
 #include "Game/Actors/Player/TitlePlayer.h"
 #include "Game/DarkGame/DarkActors/DarkStageAsset.h"
 #include "UI/Widgets/Widget.h"

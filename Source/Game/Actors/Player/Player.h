@@ -210,7 +210,7 @@ public:
 	// 指定した操作ガイド項目が学習済みかを返す。
 	bool IsOperationGuideItemLearned(OperationGuideItem item) const;
 	// Dodge State中かを返す。
-	bool IsDodging() const { return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Dodge"; }
+	bool IsDodging() const { return stateMachine && std::string(stateMachine->GetStateName()) == "Dodge"; }
 	// 戦闘中に適用するHP下限値を設定する。
 	void SetMinimumHp(int value);
 	// HPを最大値へ回復し、HPバー回復演出を開始する。
@@ -259,7 +259,7 @@ public:
 	// フェーズ遷移で確認するRush State中かを返す。
 	bool IsRushActiveForPhaseTransition() const
 	{
-		return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Rush";
+		return stateMachine && std::string(stateMachine->GetStateName()) == "Rush";
 	}
 	// Rush State中かを返す。
 	bool IsRushActive() const { return IsRushActiveForPhaseTransition(); }
@@ -276,7 +276,7 @@ public:
 	// Just Dodge成功演出中かを返す。
 	bool IsJustDodgePresentationActive() const
 	{
-		return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Dodge" && justDodgeSuccess;
+		return stateMachine && std::string(stateMachine->GetStateName()) == "Dodge" && justDodgeSuccess;
 	}
 	// 現在のRush対象を返す。
 	std::shared_ptr<Enemy> GetRushTarget() const { return rushTarget.lock(); }
@@ -301,9 +301,9 @@ public:
 	bool IsPhase1LastHitAttackFinishedForTransition() const
 	{
 		const auto controller = GetBodyAnimationController();
-		if (!controller || !controller->IsVisualPoseLatched() || !stateMachine_)
+		if (!controller || !controller->IsVisualPoseLatched() || !stateMachine)
 			return false;
-		const std::string stateName = stateMachine_->GetStateName();
+		const std::string stateName = stateMachine->GetStateName();
 		return stateName != "Attack" && stateName != "Rush";
 	}
 	// Rush追撃停止の要求中かを返す。
