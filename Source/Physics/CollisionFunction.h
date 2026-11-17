@@ -178,11 +178,9 @@ inline XMFLOAT2 ConvertScreenToUI(const XMFLOAT2& screen)
     ui.y = (screen.y - vy - offsetY) / scale;
     return ui;
 }
+
 inline XMFLOAT2 WorldToUI(const XMFLOAT3& worldPos)
 {
-    XMFLOAT2 screen =
-        CollisionFunction::GetScreenPositionFromWorldPosition(worldPos);
-
+    XMFLOAT2 screen = CollisionFunction::GetScreenPositionFromWorldPosition(worldPos);
     return ConvertScreenToUI(screen);
 }
-

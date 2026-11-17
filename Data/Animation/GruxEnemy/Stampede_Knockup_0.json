@@ -120,7 +120,7 @@
             ],
             "moveDistance": 0.0,
             "parameter": "rightWeapon",
-            "startTime": 0.24951140582561493,
+            "startTime": 0.2750000059604645,
             "type": "HitBox",
             "value": 1.0
         }

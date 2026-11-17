@@ -73,8 +73,7 @@ ClothSimulate::ClothSimulate(ID3D11Device* device, const std::string& filename) 
 
         if (gltfModel->meshes.size() != 1 || gltfModel->meshes.front().primitives.size() != 1)
         {
-            Logger::Warning(Logger::LogCategory::System,
-                "[Cloth] Unsupported model: exactly one mesh with one primitive is required.");
+            Logger::Warning(Logger::LogCategory::System, "[Cloth] Unsupported model: exactly one mesh with one primitive is required.");
             enableClothRendering = false;
             enableClothSimulation = false;
             return;
@@ -239,7 +238,7 @@ void ClothSimulate::FetchMeshes(ID3D11Device* device, const tinygltf::Model& glt
             Mesh::Primitive& primitive = mesh.primitives.emplace_back();
             primitive.material = gltfPrimitive.material;
 
-			// インデックスバッファの作成
+            // インデックスバッファの作成
             if (gltfPrimitive.indices > -1)
             {
                 const tinygltf::Accessor& gltfAccessor = gltfModel.accessors.at(gltfPrimitive.indices);
@@ -491,7 +490,7 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
     D3D11_BUFFER_DESC bufferDesc = {};
     D3D11_SUBRESOURCE_DATA subresourceData = {};
 
-	// GPUにインデックスバッファをアップロードする
+    // GPUにインデックスバッファをアップロードする
     {
         for (Mesh& mesh : meshes)
         {
@@ -517,7 +516,7 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
         }
     }
 
-	// マテリアルをGPUにアップロードする
+    // マテリアルをGPUにアップロードする
     std::vector<Material::Cbuffer> materialData;
     for (const Material& material : materials)
     {
@@ -1134,7 +1133,7 @@ void ClothSimulate::Simulate(ID3D11DeviceContext* immediateContext)
                 lastConstraintOutputBuffer = -1;
                 lastCopySourceBuffer = -1;
 
-immediateContext->CSSetUnorderedAccessViews(0, 1, primitive.clothUAV[output].GetAddressOf(), nullptr);
+                immediateContext->CSSetUnorderedAccessViews(0, 1, primitive.clothUAV[output].GetAddressOf(), nullptr);
                 immediateContext->CSSetShaderResources(0, 1, primitive.clothSRV[input].GetAddressOf());
                 immediateContext->CSSetShaderResources(1, 1, primitive.clothEdgeSRV.GetAddressOf());
                 immediateContext->CSSetShaderResources(2, 1, primitive.initialBottomWeightSRV.GetAddressOf());
@@ -1144,7 +1143,7 @@ immediateContext->CSSetUnorderedAccessViews(0, 1, primitive.clothUAV[output].Get
                 immediateContext->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
                 immediateContext->CSSetShaderResources(0, 1, nullSRV);
                 immediateContext->CSSetShaderResources(1, 1, nullSRV);
-    immediateContext->CSSetShaderResources(2, 1, nullSRV);
+                immediateContext->CSSetShaderResources(2, 1, nullSRV);
 
                 std::swap(input, output);
                 if (simulationStage == SimulationStage::UpdateCSOnly)

@@ -56,7 +56,7 @@ void GameLockOnTargetUIActor::HideMarker()
 }
 void GameLockOnTargetUIActor::UpdateMarkerPresentation(const DarkCameraActor& camera,
     const std::shared_ptr<SceneComponent>& target, const DirectX::XMFLOAT3& worldPosition,
-    bool isGrux, float deltaTime)
+    const bool isGrux, const float deltaTime)
 {
     if (lockOnTargetComponent.lock() != target)
     {

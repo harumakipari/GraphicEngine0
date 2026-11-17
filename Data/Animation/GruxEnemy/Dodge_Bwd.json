@@ -1,0 +1,15 @@
+{
+    "animationClip": 31,
+    "animationName": "Dodge_Bwd",
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0,
+    "speedCurve": {
+        "keys": [
+            {
+                "time": 0.3096654713153839,
+                "value": 0.9399999380111694
+            }
+        ]
+    }
+}

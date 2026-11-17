@@ -10,7 +10,7 @@
 void GameTutorialUIActor::Initialize(const Transform&)
 {
     const auto uiManager = GetOwnerScene()->GetUIManager();
-    const auto createPrompt = [uiManager](const char* path, const char* name, DirectX::XMFLOAT2 size)
+    const auto createPrompt = [uiManager](const char* path, const char* name, const DirectX::XMFLOAT2 size)
     {
         auto image = std::make_shared<UIImageComponent>(path, name);
         image->SetSize(size);
@@ -58,7 +58,7 @@ void GameTutorialUIActor::Finalize()
     ringMesh.reset();
 }
 
-void GameTutorialUIActor::UpdateExplanationLayout()
+void GameTutorialUIActor::UpdateExplanationLayout() const
 {
     explanation->SetWorldPosition(explanationPosition);
     explanation->SetScale(explanationScale);
@@ -66,13 +66,13 @@ void GameTutorialUIActor::UpdateExplanationLayout()
     closeImage->SetScale(closeScale);
 }
 
-void GameTutorialUIActor::SetExplanationVisible(bool visible)
+void GameTutorialUIActor::SetExplanationVisible(const bool visible) const
 {
     explanation->SetVisible(visible);
     closeImage->SetVisible(visible);
 }
 
-void GameTutorialUIActor::HidePrompts()
+void GameTutorialUIActor::HidePrompts() const
 {
     ltPrompt->SetVisible(false);
     yPrompt->SetVisible(false);
@@ -81,11 +81,11 @@ void GameTutorialUIActor::HidePrompts()
 
 void GameTutorialUIActor::UpdatePrompts(const DarkCameraActor& camera,
     const std::shared_ptr<SkeletonWarriorActor>& passive, const std::shared_ptr<SkeletonWarriorActor>& dodge,
-    bool showLt, bool showY, bool showX)
+    const bool showLt, const bool showY, const bool showX)
 {
     HidePrompts();
     const auto update = [&](const std::shared_ptr<SkeletonWarriorActor>& skeleton,
-        const std::shared_ptr<UIImageComponent>& image, bool show, DirectX::XMFLOAT2 extra)
+        const std::shared_ptr<UIImageComponent>& image, const bool show, const DirectX::XMFLOAT2 extra)
     {
         if (!show || !skeleton || skeleton->IsDead() || skeleton->IsPendingKill()) return;
         const auto target = skeleton->GetCameraTargetComponent();
@@ -104,9 +104,15 @@ void GameTutorialUIActor::UpdatePrompts(const DarkCameraActor& camera,
     update(dodge, xPrompt, showX, { 0.0f, 0.0f });
 }
 
-void GameTutorialUIActor::HideRing() { if (ringMesh) ringMesh->SetIsVisible(false); }
+void GameTutorialUIActor::HideRing() const
+{
+    if (ringMesh)
+    {
+        ringMesh->SetIsVisible(false);
+    }
+}
 
-void GameTutorialUIActor::UpdateRing(const DirectX::XMFLOAT3& p, float deltaTime)
+void GameTutorialUIActor::UpdateRing(const DirectX::XMFLOAT3& p, const float deltaTime)
 {
     if (!ringMesh) return;
     ringPulseElapsed += deltaTime;
@@ -138,8 +144,6 @@ void GameTutorialUIActor::DrawImGuiDetails()
 
     ImGui::DragFloat2(U8("ä[çúÇÃOperation Prompt Offset X / Y"), &promptOffset.x, 0.5f, -500.0f, 500.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("Operation Prompt Scale", &promptScale, 0.01f, 0.05f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-
-
 #endif
 }
 

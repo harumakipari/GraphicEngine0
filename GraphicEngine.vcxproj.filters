@@ -1392,9 +1392,6 @@
     <Filter Include="Source\Game\Actors\Stage">
       <UniqueIdentifier>{baa744c6-df18-4b5e-beed-183abafbdbf1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Game\Actors\Stage\Props">
-      <UniqueIdentifier>{5b2f7a49-f794-4284-beb5-94f2261373e1}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\Game\Actors\Player">
       <UniqueIdentifier>{1c48fc39-9d4c-4972-a943-530d4d69c4de}</UniqueIdentifier>
     </Filter>

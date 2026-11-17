@@ -14,13 +14,12 @@ public:
     void Finalize() override;
     void DrawImGuiDetails()override;
 
-
-    void UpdateExplanationLayout();
-    void SetExplanationVisible(bool visible);
-    void HidePrompts();
+    void UpdateExplanationLayout() const;
+    void SetExplanationVisible(bool visible) const;
+    void HidePrompts() const;
     void UpdatePrompts(const DarkCameraActor& camera, const std::shared_ptr<SkeletonWarriorActor>& passive,
         const std::shared_ptr<SkeletonWarriorActor>& dodge, bool showLt, bool showY, bool showX);
-    void HideRing();
+    void HideRing() const;
     void UpdateRing(const DirectX::XMFLOAT3& position, float deltaTime);
 
 private:

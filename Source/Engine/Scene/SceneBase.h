@@ -9,10 +9,8 @@
 #include "Graphics/PostProcess/GBuffer.h"
 #include "Graphics/PostProcess/MultipleRenderTargets.h"
 #include "Graphics/Shadow/CascadeShadowMap.h"
-#include "UI/Widgets/Widget.h"
 
 #include <d3d11.h>
-#include <wrl.h>
 #include <memory>
 #include <unordered_map>
 

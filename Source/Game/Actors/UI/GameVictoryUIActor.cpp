@@ -8,10 +8,9 @@
 
 namespace
 {
-    // Shared visual feedback; each result owns its selection range and tuning.
     void ApplyResultButtonFeedback(UIImageComponent& button, const DirectX::XMFLOAT2& baseScale,
-        bool selected, float selectedScale, float unselectedScale,
-        const CoreColor& selectedColor, const CoreColor& unselectedColor, float alpha)
+        const bool selected, const float selectedScale, const float unselectedScale,
+        const CoreColor& selectedColor, const CoreColor& unselectedColor, const float alpha)
     {
         const float scale = selected ? selectedScale : unselectedScale;
         button.SetScale({ baseScale.x * scale, baseScale.y * scale });
@@ -20,7 +19,7 @@ namespace
         button.SetColor(color);
     }
 
-    bool ChangeResultSelection(int& selection, int next, float volume)
+    bool ChangeResultSelection(int& selection, const int next, const float volume)
     {
         if (selection == next) return false;
         selection = next;
@@ -32,7 +31,7 @@ namespace
 
 void GameVictoryUIActor::UpdateContents()
 {
-    const auto apply = [this](const std::shared_ptr<UIImageComponent>& image, size_t layout, bool show)
+    const auto apply = [this](const std::shared_ptr<UIImageComponent>& image, const size_t layout, const bool show)
         {
             if (!image) return;
             image->SetWorldPosition(victoryUIPositions[layout]);
@@ -97,7 +96,7 @@ void GameVictoryUIActor::Initialize(const Transform& transform)
     GetOwnerScene()->GetUIManager()->Add(victoryResultBackground);
     const char* labelPaths[] = { "clear_time.png", "best_time.png", "new_record.png" };
     const DirectX::XMFLOAT2 labelSizes[] = { { 587.0f, 174.0f }, { 495.0f, 174.0f }, { 535.0f, 111.0f } };
-    auto create = [this](const std::string& path, const std::string& name, DirectX::XMFLOAT2 size)
+    auto create = [this](const std::string& path, const std::string& name, const DirectX::XMFLOAT2 size)
         {
             auto image = std::make_shared<UIImageComponent>(path, name);
             image->SetSize(size);
@@ -220,7 +219,7 @@ void GameVictoryUIActor::UpdateButtonLayout()
     }
 }
 
-int GameVictoryUIActor::UpdateInput(float moveVolume)
+int GameVictoryUIActor::UpdateInput(const float moveVolume)
 {
     if (!victoryButtonInputEnabled) return -1;
     const float stickX = InputSystem::GetLeftStick().x;
@@ -253,7 +252,7 @@ int GameVictoryUIActor::UpdateInput(float moveVolume)
 }
 
 
-void GameVictoryUIActor::SetResultData(double clearTime, double bestTime, bool newRecord, VictoryRank rank)
+void GameVictoryUIActor::SetResultData(const double clearTime, const double bestTime, const bool newRecord, const VictoryRank rank)
 {
     victoryClearTime = clearTime;
     victoryDisplayedBestTime = bestTime;
@@ -261,7 +260,7 @@ void GameVictoryUIActor::SetResultData(double clearTime, double bestTime, bool n
     victoryRank = rank;
 }
 
-void GameVictoryUIActor::SetNumberTextureSize(float width, float height)
+void GameVictoryUIActor::SetNumberTextureSize(const float width, const float height)
 {
     numberTexWidth = width;
     numberTexHeight = height;

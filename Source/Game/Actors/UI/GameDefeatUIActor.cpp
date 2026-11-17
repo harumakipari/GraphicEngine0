@@ -8,8 +8,8 @@
 namespace
 {
     void ApplyResultButtonFeedback(UIImageComponent& button, const DirectX::XMFLOAT2& baseScale,
-        bool selected, float selectedScale, float unselectedScale,
-        const CoreColor& selectedColor, const CoreColor& unselectedColor, float alpha)
+        const bool selected, const float selectedScale, const float unselectedScale,
+        const CoreColor& selectedColor, const CoreColor& unselectedColor, const float alpha)
     {
         const float scale = selected ? selectedScale : unselectedScale;
         button.SetScale({ baseScale.x * scale, baseScale.y * scale });
@@ -18,7 +18,7 @@ namespace
         button.SetColor(color);
     }
 
-    bool ChangeResultSelection(int& selection, int next, float volume)
+    bool ChangeResultSelection(int& selection, const int next, const float volume)
     {
         if (selection == next) return false;
         selection = next;
@@ -148,7 +148,7 @@ void GameDefeatUIActor::UpdateDeathResultBattleTimeValue()
     deathResultTimeValues = { minutes / 10, minutes % 10, -1, seconds / 10, seconds % 10, -2, centiseconds / 10, centiseconds % 10 };
 }
 
-void GameDefeatUIActor::UpdateDeathResultBattleTimeLayout()
+void GameDefeatUIActor::UpdateDeathResultBattleTimeLayout() const
 {
     const int minutes = deathResultTimeValues[0] * 10 + deathResultTimeValues[1];
     std::array<float, 8> layoutPositions{};
@@ -247,7 +247,6 @@ void GameDefeatUIActor::UpdateDeathResultMenu()
             uiManager->SetSelected(deathResultButtons[0].get());
         }
     }
-    // UIManager owns D-Pad/Analog selection after Result input is enabled.
     else if (auto* selected = uiManager->GetSelectedButton())
     {
         for (int i = 0; i < static_cast<int>(deathResultButtons.size()); ++i)
@@ -259,15 +258,13 @@ void GameDefeatUIActor::UpdateDeathResultMenu()
             }
         }
     }
-    const float buttonsAlpha = std::clamp((deathPresentationElapsed - deathButtonsStartTime) /
-        (std::max)(0.001f, deathButtonsFadeDuration), 0.0f, 1.0f);
+    const float buttonsAlpha = std::clamp((deathPresentationElapsed - deathButtonsStartTime) /(std::max)(0.001f, deathButtonsFadeDuration), 0.0f, 1.0f);
     for (int i = 0; i < static_cast<int>(deathResultButtons.size()); ++i)
     {
         auto& button = deathResultButtons[i];
         if (!button) continue;
         const bool selected = i == deathResultSelection;
-        ApplyResultButtonFeedback(*button, deathResultButtonScale, selected,
-            deathResultSelectedScale, 1.0f, deathResultSelectedColor, deathResultUnselectedColor, buttonsAlpha);
+        ApplyResultButtonFeedback(*button, deathResultButtonScale, selected, deathResultSelectedScale, 1.0f, deathResultSelectedColor, deathResultUnselectedColor, buttonsAlpha);
     }
 
     if (deathResultButtons[deathResultSelection])
@@ -295,7 +292,7 @@ void GameDefeatUIActor::UpdateDeathResultMenu()
 }
 
 
-void GameDefeatUIActor::SetFrameData(float elapsed, float overlayStart, float defeatedStart, float battleTimeStart, float buttonsStart, float lineStart, float texWidth, float texHeight, float moveVolume)
+void GameDefeatUIActor::SetFrameData(const float elapsed, const float overlayStart, const float defeatedStart, const float battleTimeStart, const float buttonsStart, const float lineStart, const float texWidth, const float texHeight, const float moveVolume)
 {
     deathPresentationElapsed = elapsed;
     deathOverlayStartTime = overlayStart;
@@ -308,7 +305,7 @@ void GameDefeatUIActor::SetFrameData(float elapsed, float overlayStart, float de
     deathResultMoveSeVolume = moveVolume;
 }
 
-void GameDefeatUIActor::SetBattleTime(float battleTime)
+void GameDefeatUIActor::SetBattleTime(const float battleTime)
 {
     deathAttemptTime = battleTime;
     UpdateDeathResultBattleTimeValue();

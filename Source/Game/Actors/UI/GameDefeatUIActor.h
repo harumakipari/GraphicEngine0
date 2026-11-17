@@ -28,7 +28,7 @@ public:
 
 private:
     void UpdateDeathResultBattleTimeValue();
-    void UpdateDeathResultBattleTimeLayout();
+    void UpdateDeathResultBattleTimeLayout() const;
     void UpdateDeathResultMenu();
 
 private:
