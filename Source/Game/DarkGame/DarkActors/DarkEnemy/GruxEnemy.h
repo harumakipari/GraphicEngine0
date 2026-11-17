@@ -37,7 +37,7 @@ public:
 		Facing,  // 向き合わせ中。
 		Telegraph,  // 予兆中。
 		Movement,  // 移動中。
-		Knockup,  // Knockup中。
+		Knockup,  // Knock up中。
 		InterDashTransition,  // Dash間の遷移中。
 		Recovery  // 硬直中。
 	};
@@ -105,6 +105,23 @@ public:
 		Stuck,  // 移動が停滞。
 		InvalidTarget,  // 目標が無効。
 		MaxDistanceReached  // 最大移動距離に到達。
+	};
+
+	enum class RepositionStrafeDirection : uint8_t
+	{
+		None,
+		Left,
+		Right,
+		Backstep
+	};
+
+	enum class AttackSetupMoveDirection : uint8_t
+	{
+		None,
+		Forward,
+		Backward,
+		Left,
+		Right
 	};
 
 	enum class TripleJumpPhase : uint8_t
@@ -241,7 +258,31 @@ public:
 		float elapsed = 0.0f;  // 移動の経過時間。
 		float traveledDistance = 0.0f;  // 移動済み距離。
 		float stuckTime = 0.0f;  // 停滞した時間。
+		bool movementBlocked = false;
 		bool movementActive = false;  // 移動が有効か。
+	};
+
+	struct BackstepDebugRuntime
+	{
+		bool active = false;
+		DirectX::XMFLOAT3 startPosition{};
+		float requestedDistance = 0.0f;
+		float appliedDistance = 0.0f;
+		float maximumFrameSpeed = 0.0f;
+		bool roomBoundaryBlocked = false;
+		bool sweepBlocked = false;
+	};
+
+	struct StrafeDebugRuntime
+	{
+		bool active = false;
+		bool initialReposition = false;
+		bool leftStrafe = false;
+		DirectX::XMFLOAT3 startPosition{};
+		float configuredDuration = 0.0f;
+		float configuredSpeed = 0.0f;
+		float startingPlayerDistance = 0.0f;
+		const char* endReason = nullptr;
 	};
 
 	struct WeaponHitBoxPoints
@@ -423,6 +464,7 @@ public:
 
 	// Dash開始に向けた目標位置と実行状態を準備する。
 	bool PrepareDashAttackSetupTarget();
+	bool SelectAttackSetupMoveDirection(const DirectX::XMFLOAT3& target);
 
 	// 準備後にDashを開始できるか判定する。
 	bool CanExecuteDashAttack() const;
@@ -1498,21 +1540,35 @@ private:
 
 	// Retreat設定・移動状態
 	float retreatDistanceMin = 5.0f;  // 退避先とプレイヤーとの距離の下限。
-	float retreatDistanceMax = 12.0f;  // 退避先とプレイヤーとの距離の上限。
+	float retreatDistanceMax = 9.0f;  // 退避先とプレイヤーとの距離の上限。
 	float retreatMinimumMoveDistance = 5.0f;  // 退避候補に必要な最小移動距離。
 	float retreatMoveSpeed = 6.0f;  // 退避時の移動速度。
 	float retreatRetryCooldownDuration = 0.5f;  // 退避の再試行までの待ち時間。
 	float retreatRetryCooldownRemaining = 0.0f;  // 退避の再試行までの残り時間。
 	PositioningTargetContext retreatTarget{};  // 退避先と移動条件。
 	PositioningTargetRuntime retreatMovementRuntime{};  // 退避移動の経過時間や移動距離。
+	RepositionStrafeDirection retreatMoveDirection = RepositionStrafeDirection::None;
+	DirectX::XMFLOAT3 retreatMoveDirectionVector{};
 
 	// 攻撃準備の移動Runtime
 	PositioningTargetRuntime attackSetupRuntime{};  // 攻撃準備位置への移動状態。
+	AttackSetupMoveDirection attackSetupMoveDirection = AttackSetupMoveDirection::None;
 
 	// Reposition設定・移動状態・抽選
 	PositioningTargetContext repositionTarget{}; PositioningTargetRuntime repositionMovementRuntime{};  // 位置調整の移動目標と実行状態。
-	float repositionDistanceMin = 6.0f, repositionDistanceMax = 13.0f;  // 位置調整候補と対象との距離の下限と上限。
-	float repositionMinimumMoveDistance = 5.0f, repositionMinimumPlayerDistance = 4.0f, repositionMoveSpeed = 6.0f;  // 位置調整の最小移動距離、対象との最小距離、移動速度。
+	BackstepDebugRuntime backstepDebugRuntime{};
+	StrafeDebugRuntime strafeDebugRuntime{};
+	float repositionDistanceMin = 6.0f;
+    float repositionDistanceMax = 13.0f;  // 位置調整候補と対象との距離の下限と上限。
+	float repositionMinimumMoveDistance = 5.0f;
+	float repositionMinimumPlayerDistance = 4.0f;
+    float repositionMoveSpeed = 6.0f;  // 位置調整の最小移動距離、対象との最小距離、移動速度。
+	RepositionStrafeDirection repositionStrafeDirection = RepositionStrafeDirection::None;
+	float repositionStrafeDuration = 1.5f; // 
+	float repositionBackstepTriggerDistance = 4.0f;
+	float repositionBackstepDistance = 8.f;
+	float repositionBackstepDuration = 1.3333334f;
+	DirectX::XMFLOAT3 repositionBackstepDirection{};
 	float repositionArrivalWaitDuration = 0.5f;  // 位置調整の到着後に待機する時間。
 	bool initialRepositionPending = true;  // 戦闘開始時の位置調整が未完了かを示す。
 	bool initialRepositionFallbackIdlePending = false;  // 初期位置調整の失敗後にIdleを挟む状態。
@@ -1564,10 +1620,10 @@ private:
 	float recoveryDuration = 0.5f;  // 攻撃別Recovery時間を取得できない場合の代替時間。
 
 	// 行動選択・向き合わせ設定
-	float nearFrontFastComboProbability = 0.7f;  // 近距離正面でFastComboを抽選する基本確率。
+	float nearFrontFastComboProbability = 0.45f;  // 近距離正面でFastComboを抽選する基本確率。 45％
 	float fastComboFrontMaxAngle = 90.0f;  // 近距離正面のFastCombo抽選に使う角度上限。
 	float defensiveBackMinAngle = 120.0f;  // 防御行動で背後とみなす最小角度。
-	float nearDistanceThreshold = 8.0f;  // 距離領域を近距離と判定する上限。
+	float nearDistanceThreshold = 6.0f;  // 距離領域を近距離と判定する上限。
 	float middleDistanceThreshold = 12.0f;  // 距離領域を中距離と判定する上限。
 
 	float relativeFrontMaxAngle = 50.0f;  // 相対領域を正面と判定する角度上限。
@@ -1599,6 +1655,7 @@ private:
 	float jumpSetupDistanceMin = 6.5f;  // Jumpの準備位置に必要な対象との最小距離。
 	float jumpSetupDistanceMax = 20.f;  // Jumpの準備位置に必要な対象との最大距離。
 	float jumpSetupMinimumMoveDistance = 5.0f;  // Jump準備位置への最小移動距離。
+	float jumpSetupDistance = 5.0f;
 
 	// 共通の攻撃準備探索設定
 	float attackSetupCandidateAngleStep = 30.0f;  // 攻撃準備位置の候補を探索する角度間隔。
@@ -1644,6 +1701,8 @@ private:
 	float dashSetupDistanceMin = 8.0f;  // Dashの準備位置に必要な対象との最小距離。
 	float dashSetupDistanceMax = 10.0f;  // Dashの準備位置に必要な対象との最大距離。
 	float dashSetupMinimumMoveDistance = 5.0f;  // Dash準備位置への最小移動距離。
+	float dashSetupDistance = 5.0f;
+	float dashSetupBackwardDistance = 8.0f;
 	DashBTPhase dashBTPhase = DashBTPhase::None;  // Dashの準備からRecoveryまでの実行段階。
 	bool dashBTAttackStarted = false;  // Dashの攻撃シーケンスが開始済みかを示す。
 	BossActionType dashBTPreviousAction = BossActionType::AttackLA;  // Dash開始前に選択されていた行動。

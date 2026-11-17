@@ -15,6 +15,7 @@
 #include "Game/DarkGame/DarkActors/DarkStage.h"
 #include "Game/DarkGame/DarkActors/ModelDebrisEmitterActor.h"
 #include "Physics/CollisionFunction.h"
+#include "Physics/Physics.h"
 
 #include "Game/DarkGame/BehaviorTree/BehaviorData.h"
 #include "Game/DarkGame/BehaviorTree/BehaviorTree.h"
@@ -851,7 +852,24 @@ void GruxEnemy::StopBattleActions()
 
     // îÒçUåÇÇÃPositioningñ⁄ïWÇ‡îjä¸Ç∑ÇÈÅB
     ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
+    if (strafeDebugRuntime.active)
+    {
+        const DirectX::XMFLOAT3 endPosition = GetPosition();
+        const float deltaX = endPosition.x - strafeDebugRuntime.startPosition.x;
+        const float deltaZ = endPosition.z - strafeDebugRuntime.startPosition.z;
+        const float horizontalDistance = std::sqrt(deltaX * deltaX + deltaZ * deltaZ);
+        Logger::Log(Logger::LogCategory::Gameplay, std::format(
+            "[GruxStrafe] End initial={} direction={} start=({:.3f}, {:.3f}, {:.3f}) end=({:.3f}, {:.3f}, {:.3f}) configuredDuration={:.3f} elapsed={:.3f} configuredSpeed={:.3f} horizontalDistance={:.3f} playerDistance={:.3f} reason=interrupted",
+            strafeDebugRuntime.initialReposition, strafeDebugRuntime.leftStrafe ? "left" : "right",
+            strafeDebugRuntime.startPosition.x, strafeDebugRuntime.startPosition.y, strafeDebugRuntime.startPosition.z,
+            endPosition.x, endPosition.y, endPosition.z, strafeDebugRuntime.configuredDuration,
+            repositionMovementRuntime.elapsed, strafeDebugRuntime.configuredSpeed, horizontalDistance,
+            strafeDebugRuntime.startingPlayerDistance));
+        strafeDebugRuntime = {};
+    }
     ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
+    repositionStrafeDirection = RepositionStrafeDirection::None;
+    repositionBackstepDirection = {};
     ClearJumpAttackMotionWarpOverride();
     ClearFastComboStepIn();
     justDodgedActors.clear();
@@ -1714,7 +1732,6 @@ void GruxEnemy::StartSelectedActionCooldown()
     {
         if (combatActionData[i].type != selectedActionType)
             continue;
-
         combatActionCooldownRemaining[i] = (std::max)(0.0f, combatActionData[i].cooldownDuration);
         return;
     }
@@ -1970,6 +1987,7 @@ bool GruxEnemy::CanPlanJumpAttack() const
 
 bool GruxEnemy::PrepareJumpAttackSetupTarget()
 {
+    attackSetupMoveDirection = AttackSetupMoveDirection::None;
     DirectX::XMFLOAT3 target{};
     if (!FindAttackSetupTarget(jumpSetupDistanceMin, jumpSetupDistanceMax,
         attackSetupCandidateAngleStep, attackSetupClampTolerance, jumpSetupMinimumMoveDistance,
@@ -1978,26 +1996,263 @@ bool GruxEnemy::PrepareJumpAttackSetupTarget()
         ClearAttackSetupTarget();
         return false;
     }
+
+    if (!SelectAttackSetupMoveDirection(target))
+    {
+        ClearAttackSetupTarget();
+        return false;
+    }
+
     attackSetupTarget = {};
     attackSetupTarget.targetPosition = target;
     attackSetupTarget.valid = true;
     return true;
 }
 
+bool GruxEnemy::SelectAttackSetupMoveDirection(const DirectX::XMFLOAT3& target)
+{
+    const auto context = BuildTargetContext();
+    if (!context.valid)
+        return false;
+
+    const auto position = GetPosition();
+    const float targetX = target.x - position.x;
+    const float targetZ = target.z - position.z;
+    const DirectX::XMFLOAT3 rightDirection{ context.directionToPlayer.z, 0.0f, -context.directionToPlayer.x };
+    const float forwardProjection = targetX * context.directionToPlayer.x + targetZ * context.directionToPlayer.z;
+    const float rightProjection = targetX * rightDirection.x + targetZ * rightDirection.z;
+    if (std::abs(forwardProjection) >= std::abs(rightProjection))
+        attackSetupMoveDirection = forwardProjection >= 0.0f ? AttackSetupMoveDirection::Forward : AttackSetupMoveDirection::Backward;
+    else
+        attackSetupMoveDirection = rightProjection >= 0.0f ? AttackSetupMoveDirection::Right : AttackSetupMoveDirection::Left;
+    return true;
+}
+
 void GruxEnemy::ClearAttackSetupTarget()
 {
     ClearPositioningTarget(attackSetupTarget, attackSetupRuntime);
+    attackSetupMoveDirection = AttackSetupMoveDirection::None;
 }
 
 GruxEnemy::AttackSetupMoveResult GruxEnemy::UpdateAttackSetupMovement(float dt)
 {
-    const auto result = UpdatePositioningTargetMovement(attackSetupTarget, attackSetupRuntime, dt);
-    return result;
+    if (!(selectedAttackType == BossAttackType::JumpAttack || selectedAttackType == BossAttackType::DashAttack || selectedAttackType == BossAttackType::ChargeAttack) || attackSetupMoveDirection == AttackSetupMoveDirection::None)
+        return UpdatePositioningTargetMovement(attackSetupTarget, attackSetupRuntime, dt);
+
+    if (!attackSetupTarget.valid)
+        return AttackSetupMoveResult::InvalidTarget;
+    const bool startingMovement = !attackSetupRuntime.movementActive;
+    if (startingMovement)
+    {
+        attackSetupRuntime.movementActive = true;
+        attackSetupRuntime.previousPosition = GetPosition();
+    }
+
+    const float safeDt = (std::max)(0.0f, dt);
+    const float previousElapsed = attackSetupRuntime.elapsed;
+    attackSetupRuntime.elapsed += safeDt;
+    if (attackSetupRuntime.elapsed >= attackSetupTarget.timeout)
+        return AttackSetupMoveResult::Timeout;
+
+    const auto position = GetPosition();
+    const float movedX = position.x - attackSetupRuntime.previousPosition.x;
+    const float movedZ = position.z - attackSetupRuntime.previousPosition.z;
+    const float frameMovement = std::sqrt(movedX * movedX + movedZ * movedZ);
+    attackSetupRuntime.traveledDistance += frameMovement;
+    attackSetupRuntime.previousPosition = position;
+
+    float moveDistance = 0.0f;
+    const char* animationName = "TravelMode_Fwd_0";
+    switch (attackSetupMoveDirection)
+    {
+    case AttackSetupMoveDirection::Forward:
+        moveDistance = (selectedAttackType == BossAttackType::DashAttack || selectedAttackType == BossAttackType::ChargeAttack) ? dashSetupDistance : jumpSetupDistance;
+        break;
+    case AttackSetupMoveDirection::Backward:
+        moveDistance = (selectedAttackType == BossAttackType::DashAttack || selectedAttackType == BossAttackType::ChargeAttack) ? dashSetupBackwardDistance : repositionBackstepDistance;
+        animationName = "Dodge_Bwd";
+        break;
+    case AttackSetupMoveDirection::Left:
+        moveDistance = (selectedAttackType == BossAttackType::DashAttack || selectedAttackType == BossAttackType::ChargeAttack) ? dashSetupDistance : jumpSetupDistance;
+        animationName = "TravelMode_Lft_0";
+        break;
+    case AttackSetupMoveDirection::Right:
+        moveDistance = (selectedAttackType == BossAttackType::DashAttack || selectedAttackType == BossAttackType::ChargeAttack) ? dashSetupDistance : jumpSetupDistance;
+        animationName = "TravelMode_Rgt_0";
+        break;
+    default:
+        return AttackSetupMoveResult::InvalidTarget;
+    }
+
+    const bool isBackward = attackSetupMoveDirection == AttackSetupMoveDirection::Backward;
+    const auto controller = GetBodyAnimationController();
+    if (isBackward && (!controller || !controller->GetAnimationAsset(animationName)))
+        return AttackSetupMoveResult::InvalidTarget;
+    if (isBackward && controller->GetCurrentAnimationName() == animationName && !controller->IsPlayAnimation())
+        return attackSetupRuntime.traveledDistance >= (std::max)(0.0f, moveDistance)
+            ? AttackSetupMoveResult::Arrived : AttackSetupMoveResult::Stuck;
+    if (!isBackward && attackSetupRuntime.traveledDistance >= (std::max)(0.0f, moveDistance))
+        return AttackSetupMoveResult::Arrived;
+    if (isBackward && attackSetupRuntime.traveledDistance < (std::max)(0.0f, moveDistance))
+    {
+        attackSetupRuntime.stuckTime = frameMovement < attackSetupTarget.stuckMovementThreshold
+            ? attackSetupRuntime.stuckTime + safeDt : 0.0f;
+    }
+    else if (!isBackward)
+    {
+        attackSetupRuntime.stuckTime = frameMovement < attackSetupTarget.stuckMovementThreshold
+            ? attackSetupRuntime.stuckTime + safeDt : 0.0f;
+    }
+    if (attackSetupRuntime.traveledDistance >= attackSetupTarget.maxMoveDistance)
+        return AttackSetupMoveResult::MaxDistanceReached;
+    if (attackSetupRuntime.stuckTime >= attackSetupTarget.stuckTimeThreshold)
+        return AttackSetupMoveResult::Stuck;
+    if (!characterMovementComponent || !rotationComponent)
+        return AttackSetupMoveResult::InvalidTarget;
+
+    const auto context = BuildTargetContext();
+    if (!context.valid)
+        return AttackSetupMoveResult::InvalidTarget;
+
+    DirectX::XMFLOAT3 moveDirection = context.directionToPlayer;
+    const DirectX::XMFLOAT3 rightDirection{ moveDirection.z, 0.0f, -moveDirection.x };
+    switch (attackSetupMoveDirection)
+    {
+    case AttackSetupMoveDirection::Backward:
+        moveDirection.x = -moveDirection.x;
+        moveDirection.z = -moveDirection.z;
+        break;
+    case AttackSetupMoveDirection::Left:
+        moveDirection.x = -rightDirection.x;
+        moveDirection.z = -rightDirection.z;
+        break;
+    case AttackSetupMoveDirection::Right:
+        moveDirection = rightDirection;
+        break;
+    default:
+        break;
+    }
+
+    const auto isRetreatPathBlocked = [&](const float distance)
+        {
+            if (distance <= 0.0f)
+                return false;
+            const auto capsulePosition = enemyCapsuleComponent->GetComponentWorldTransform().GetLocation();
+            const float capsuleRadius = enemyCapsuleComponent->GetRadius();
+            const float capsuleHalfHeight = (std::max)(enemyCapsuleComponent->GetHeight() * 0.5f - capsuleRadius, 0.0f);
+            PositioningSweepShape sweepShape{};
+            sweepShape.type = capsuleHalfHeight <= FLT_EPSILON
+                ? PositioningSweepShape::Type::Sphere : PositioningSweepShape::Type::Capsule;
+            sweepShape.center = capsulePosition;
+            sweepShape.center.y += enemyCapsuleComponent->GetCollisionOffsetY() + 0.8f;
+            sweepShape.point1 = sweepShape.center;
+            sweepShape.point2 = sweepShape.center;
+            sweepShape.point1.y += capsuleHalfHeight;
+            sweepShape.point2.y -= capsuleHalfHeight;
+            sweepShape.radius = capsuleRadius;
+            const uint32_t obstacleMask = CollisionHelper::ToBit(CollisionLayer::WorldStatic) |
+                CollisionHelper::ToBit(CollisionLayer::WorldProps) |
+                CollisionHelper::ToBit(CollisionLayer::Convex);
+            PositioningPathSafetyPolicy policy{};
+            policy.floorNormalThreshold = 0.7f;
+            policy.supportPenetrationTolerance = 0.30f;
+            PositioningPathSafetyResult pathResult{};
+            return Physics::Instance().SweepPositioningPath(
+                sweepShape, moveDirection, distance, obstacleMask, policy, pathResult);
+        };
+
+    if (isBackward && startingMovement)
+    {
+        const DirectX::XMFLOAT3 desired{
+            position.x + moveDirection.x * moveDistance,
+            position.y,
+            position.z + moveDirection.z * moveDistance };
+        RepositionTargetEvaluation evaluation{};
+        EvaluateClampedPositioningTarget(position, desired, evaluation);
+        if (evaluation.bossRoomPathBlocked || evaluation.clampDistance > 0.001f ||
+            isRetreatPathBlocked(moveDistance))
+        {
+            StopAIMovement();
+            return AttackSetupMoveResult::Stuck;
+        }
+    }
+
+    float frameSpeed = attackSetupTarget.moveSpeed;
+    if (isBackward)
+    {
+        constexpr std::array<std::pair<float, float>, 23> distanceCurve
+        { {
+            { 0.166666700f, 0.000000000f }, { 0.183333300f, 0.006010519f },
+            { 0.200000000f, 0.023290758f }, { 0.216666700f, 0.050713751f },
+            { 0.233333300f, 0.087152512f }, { 0.250000000f, 0.131480097f },
+            { 0.266666700f, 0.182569507f }, { 0.283333400f, 0.239293748f },
+            { 0.300000000f, 0.300525895f }, { 0.316666700f, 0.365139014f },
+            { 0.333333300f, 0.432006004f }, { 0.350000000f, 0.500000000f },
+            { 0.366666700f, 0.567993996f }, { 0.383333400f, 0.634860986f },
+            { 0.400000000f, 0.699474105f }, { 0.416666700f, 0.760706252f },
+            { 0.433333400f, 0.817430469f }, { 0.450000000f, 0.868519844f },
+            { 0.466666700f, 0.912847465f }, { 0.483333300f, 0.949286231f },
+            { 0.500000000f, 0.976709231f }, { 0.516666700f, 0.993989457f },
+            { 0.533333400f, 1.000000000f }
+        } };
+        const auto getDistanceAtTime = [&](float time)
+            {
+                if (time <= distanceCurve.front().first)
+                    return distanceCurve.front().second;
+                if (time >= distanceCurve.back().first)
+                    return distanceCurve.back().second;
+                for (size_t index = 1; index < distanceCurve.size(); ++index)
+                {
+                    const auto& previousKey = distanceCurve[index - 1];
+                    const auto& nextKey = distanceCurve[index];
+                    if (time <= nextKey.first)
+                    {
+                        const float keyDuration = nextKey.first - previousKey.first;
+                        const float blend = keyDuration > FLT_EPSILON
+                            ? (time - previousKey.first) / keyDuration : 0.0f;
+                        return std::lerp(previousKey.second, nextKey.second, blend);
+                    }
+                }
+                return distanceCurve.back().second;
+            };
+        const float frameDistance = (std::max)(0.0f, getDistanceAtTime(attackSetupRuntime.elapsed) -
+            getDistanceAtTime(previousElapsed)) * (std::max)(0.0f, moveDistance);
+        frameSpeed = safeDt > FLT_EPSILON ? frameDistance / safeDt : 0.0f;
+    }
+
+    if (isBackward && frameSpeed > 0.0f)
+    {
+        const DirectX::XMFLOAT3 desired{
+            position.x + moveDirection.x * frameSpeed * safeDt,
+            position.y,
+            position.z + moveDirection.z * frameSpeed * safeDt };
+        RepositionTargetEvaluation evaluation{};
+        EvaluateClampedPositioningTarget(position, desired, evaluation);
+        if (evaluation.bossRoomPathBlocked || evaluation.clampDistance > 0.001f ||
+            isRetreatPathBlocked(frameSpeed * safeDt))
+        {
+            StopAIMovement();
+            return AttackSetupMoveResult::Stuck;
+        }
+    }
+
+    characterMovementComponent->SetFixedSpeed(frameSpeed);
+    characterMovementComponent->SetInputMagnitude(frameSpeed > 0.0f || !isBackward ? 1.0f : 0.0f);
+    characterMovementComponent->SetMoveDirection(moveDirection);
+    RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), safeDt);
+    positioningAnimationMoving = true;
+    positioningMoveStopTimer = 0.0f;
+    const bool movePlaying = controller && controller->IsPlayAnimation() &&
+        controller->GetCurrentAnimationName() == animationName;
+    if (isBackward ? controller->GetCurrentAnimationName() != animationName : !movePlaying)
+        PlayBodyAnimation(animationName, !isBackward, true, 0.15f, true);
+    return AttackSetupMoveResult::Running;
 }
 
 void GruxEnemy::StopAttackSetupMovement()
 {
     attackSetupRuntime.movementActive = false;
+    attackSetupMoveDirection = AttackSetupMoveDirection::None;
     StopAIMovement();
     EndPositioningAnimation();
 }
@@ -2120,6 +2375,8 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
     ClearAttackSetupTarget();
     ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
     ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
+    repositionStrafeDirection = RepositionStrafeDirection::None;
+    repositionBackstepDirection = {};
 
     combatActionCooldownRemaining.fill(0.0f);
     selectedAttackType = BossAttackType::PrimaryAttackLA;
@@ -2284,6 +2541,8 @@ void GruxEnemy::UpdateBehaviorTree(float dt)
     }
     if (!activeNode)
     {
+        repositionDecisionCached = false;
+        repositionDecisionResult = false;
         return;
     }
     behaviorTreePreviousNode = activeNode->GetName();
@@ -2296,6 +2555,8 @@ void GruxEnemy::UpdateBehaviorTree(float dt)
         {// çUåÇÇÃäÆóπÇãLò^Ç∑ÇÈÅB
             ++consecutiveAttackCount;
         }
+        repositionDecisionCached = false;
+        repositionDecisionResult = false;
         return;
     }
 }
@@ -3769,6 +4030,8 @@ void GruxEnemy::BeginFourthHitReaction(const DirectX::XMFLOAT3& hitSourcePositio
     ResetBehaviorTreeRuntime();
     ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
     ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
+    repositionStrafeDirection = RepositionStrafeDirection::None;
+    repositionBackstepDirection = {};
 
     DirectX::XMFLOAT3 forward = GetForward();
     forward.y = 0.0f;

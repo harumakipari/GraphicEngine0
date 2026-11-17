@@ -329,6 +329,11 @@ bool GruxEnemy::PrepareDashAttackSetupTarget()
 		CleanupDashAttackBT();
 		return false;
 	}
+	if (!SelectAttackSetupMoveDirection(target))
+	{
+		CleanupDashAttackBT();
+		return false;
+	}
 	attackSetupTarget = {};
 	attackSetupTarget.valid = true;
 	attackSetupTarget.targetPosition = target;

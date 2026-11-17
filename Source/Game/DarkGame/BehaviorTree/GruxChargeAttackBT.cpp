@@ -129,6 +129,11 @@ bool GruxEnemy::PrepareChargeAttackSetupTarget()
         CleanupChargeAttackBT();
         return false;
     }
+    if (!SelectAttackSetupMoveDirection(target))
+    {
+        CleanupChargeAttackBT();
+        return false;
+    }
     attackSetupTarget = {};
     attackSetupTarget.valid = true;
     attackSetupTarget.targetPosition = target;
