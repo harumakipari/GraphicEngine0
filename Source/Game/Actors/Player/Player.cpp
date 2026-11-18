@@ -1146,7 +1146,7 @@ void Player::StartEvent()
     // 入力を受け付けない
     InputSystem::SetInputEnabled(false);
     //　イベント中はplayerの透過処理をなくす
-    this->moviePerform = true;
+    this->cameraOcclusionTransparencySuppressed = true;
 }
 
 // イベントシーン終了時に呼ぶ処理
@@ -1157,7 +1157,7 @@ void Player::EndEvent()
     RefreshOperationGuideUIVisibility();
 
     //　イベントが終わったのでplayerの透過処理を戻す
-    this->moviePerform = false;
+    this->cameraOcclusionTransparencySuppressed = false;
 }
 
 void Player::StopLowHpPresentation()
@@ -3716,7 +3716,7 @@ void Player::UpdateCameraOcclusionTransparency() const
     skeletalMeshComponent->SetIsVisible(true);
     float ditherAlpha = 1.0f;
 
-    if (moviePerform || deathCameraTransparencyDisabled)
+    if (cameraOcclusionTransparencySuppressed || deathCameraTransparencyDisabled)
     {// 演出中は壁の近くでも透明化しない
         ditherAlpha = 1.0f;
     }

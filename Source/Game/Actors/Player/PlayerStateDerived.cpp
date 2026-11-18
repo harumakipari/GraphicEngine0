@@ -220,14 +220,14 @@ void PlayerDodgeState::Enter()
     }
 
     rushRequested = false;
-    judgeSuccess = false;
+    justDodgeSuccessHandled = false;
 }
 
 void PlayerDodgeState::Execute(float deltaTime)
 {
-    if (player->justDodgeSuccess && !judgeSuccess)
+    if (player->justDodgeSuccess && !justDodgeSuccessHandled)
     {// ジャスト回避成功したら、
-        judgeSuccess = true;
+        justDodgeSuccessHandled = true;
         player->SetRushInputAcceptance(!player->rushTarget.expired());
     }
     if (player->rushTarget.expired())
@@ -235,7 +235,7 @@ void PlayerDodgeState::Execute(float deltaTime)
         player->SetRushInputAcceptance(false);
         rushRequested = false;
     }
-    if (judgeSuccess)
+    if (justDodgeSuccessHandled)
     {
         if (player->CanAcceptInitialRushInput() &&
             player->bufferCommand.type == Player::ActionType::Attack)
@@ -297,7 +297,7 @@ void PlayerDodgeState::Exit()
     const bool enteringRush = rushRequested;
     player->SetRushInputAcceptance(false);
     rushRequested = false;
-    judgeSuccess = false;
+    justDodgeSuccessHandled = false;
     player->BeginPlayerSlowReturn();
     if (!enteringRush)
     {// ラッシュに入らないなら
@@ -305,7 +305,7 @@ void PlayerDodgeState::Exit()
         if (auto* scene = dynamic_cast<SceneBase*>(player->GetOwnerScene()))
             scene->StopJustDodgeRadialBlur();
     }
-    player->characterMovementComponent->ResetFixedSpeed(); // 攻撃が終わったら移動速度をリセットする
+    player->characterMovementComponent->ResetFixedSpeed(); // 固定移動速度をリセットする
 }
 
 void PlayerDamageState::Enter()
@@ -726,7 +726,7 @@ void PlayerRushState::Exit()
     currentAttackAnimation = "Rush_Attack_Fast_A";
 
     player->ClearFinalHitRushFollowUpStop();
-    player->characterMovementComponent->ResetFixedSpeed(); // 攻撃が終わったら移動速度をリセットする
+    player->characterMovementComponent->ResetFixedSpeed(); // 固定移動速度をリセットする
     player->GetBodyAnimationController()->ResetAnimationRate();
     player->ForceResetPlayerSlow();
     player->BeginBossSlowReturn(true);

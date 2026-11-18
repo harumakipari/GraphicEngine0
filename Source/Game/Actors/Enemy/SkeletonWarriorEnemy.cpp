@@ -829,7 +829,7 @@ void SkeletonWarriorActor::UpdateWeaponSweep(Player& player)
 bool SkeletonWarriorActor::TryStartJustDodgeSuccess(Player& player)
 {
     if (hasJustDodgedPlayerThisAttack || !isDangerWindow ||
-        !player.GetJustDodgeWindow() || !player.CanJustDodgeAgainst(GetPosition()))
+        !player.IsJustDodgeWindowActive() || !player.CanJustDodgeAgainst(GetPosition()))
     {
         return false;
     }
@@ -846,7 +846,7 @@ bool SkeletonWarriorActor::TryStartJustDodgeSuccess(Player& player)
 void SkeletonWarriorActor::UpdateDangerWindow(Player& player)
 {
     if (hasJustDodgedPlayerThisAttack || !IsPlayerInsideDangerArea(player) ||
-        !player.GetJustDodgeWindow())
+        !player.IsJustDodgeWindowActive())
     {
         return;
     }

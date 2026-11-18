@@ -273,7 +273,7 @@ void GruxEnemy::Update(float deltaTime)
             }
             const DangerArea::CapsuleResult capsuleResult = dangerArea.IntersectsPlayerCapsule(playerCapsuleCenter, playerCapsuleRadius, playerCapsuleHeight);
             const bool inside = capsuleResult.overlap;
-            if (inside && player->GetJustDodgeWindow())
+            if (inside && player->IsJustDodgeWindowActive())
             {
                 if (!HasJustDodgedAttack(player.get()))
                 {
@@ -4141,7 +4141,7 @@ bool GruxEnemy::HasJustDodgedAttack(const Actor* actor) const
 
 bool GruxEnemy::TryStartJustDodgeSuccess(Player* player)
 {
-    if (!player || !player->GetJustDodgeWindow() || HasJustDodgedAttack(player))
+    if (!player || !player->IsJustDodgeWindowActive() || HasJustDodgedAttack(player))
         return false;
 
     if (!player->CanJustDodgeAgainst(GetPosition()))

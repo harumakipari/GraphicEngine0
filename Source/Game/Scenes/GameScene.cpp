@@ -304,12 +304,12 @@ void GameScene::Update(float deltaTime)
     // シネマカメラだったらまたはムービーカメラだったらプレイヤーを透明化しない
     if (isCinematicOrMovie)
     {
-        player->SetIsPlayerTransparency(false);
+        player->SetCameraOcclusionTransparencyEnabled(false);
         player->SetOperationGuideHudVisible(false);
     }
     else
     {
-        player->SetIsPlayerTransparency(true);
+        player->SetCameraOcclusionTransparencyEnabled(true);
         player->SetOperationGuideHudVisible(playerInputAvailable);
     }
 

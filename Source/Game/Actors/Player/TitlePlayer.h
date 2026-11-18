@@ -15,8 +15,6 @@ public:
     void Finalize()override {}
 
 private:
-    // 描画用コンポーネントを追加
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
-    // 剣の描画用メッシュコンポーネント
     std::shared_ptr<SkeletalMeshComponent> swordMeshComponent;
 };

@@ -30,7 +30,7 @@ void TitlePlayer::Initialize(const Transform& transform)
                 material.materialType = MaterialType::Hair;
             }
             else if (material.name == "M_Aurora_Fur_FrozenHearth")
-            {// 髪の毛だったら
+            {// 毛皮材質なら
                 material.overridePipelineName = "characterFurAndHairSkeletalMesh";
                 material.materialType = MaterialType::Fur;
             }
@@ -93,7 +93,7 @@ void TitlePlayer::Update(float deltaTime)
 {
     using namespace DirectX;
 
-    // これは絶対入れる　アニメーションの更新をしているから
+    // Character::Updateでアニメーションを更新するため必要。
     Character::Update(deltaTime);
     DirectX::XMFLOAT3 playerPos = { -25.302f,0.004f,12.205f };
     SetPosition(playerPos);
