@@ -329,7 +329,7 @@ private:
         bool& outCollisionHit) const;
     void UpdateLockOnFovFallback(float deltaTime);
     void UpdateCombatPresentation(float deltaTime);
-    void ApplyCombatPresentationPose(const DirectX::XMFLOAT3& playerPosition, const std::shared_ptr<Enemy>& rushTarget);
+    void ApplyCombatPresentationPose(const DirectX::XMFLOAT3&);
     void ApplyCombatPresentationFov();
 
     // LockOn開始時に前回の適応値を持ち越さない
@@ -489,57 +489,18 @@ private:
     float lockOnCurrentFovDegree = 45.0f;
     float lockOnFovReturnDelayElapsed = 0.0f;
     bool lockOnFovFallbackActive = false;
-    enum class CombatPresentationMode : uint8_t { None, JustDodge, Rush };
+    enum class CombatPresentationMode : uint8_t { None, JustDodge };
     enum class CombatPresentationPhase : uint8_t { Inactive, Enter, Hold, Exit };
     CombatPresentationMode combatPresentationMode = CombatPresentationMode::None;
     CombatPresentationPhase combatPresentationPhase = CombatPresentationPhase::Inactive;
     float combatPresentationBlend = 0.0f;
-    float combatPresentationRushBlend = 0.0f;
-    float combatPresentationRushRotationBlend = 0.0f;
-    float combatPresentationRushFovBlend = 0.0f;
-    float combatPresentationRushStartPitch = 0.0f;
-    float combatPresentationRushIntroElapsed = 0.0f;
-    float combatPresentationRushTravelBlend = 0.0f;
-    float combatPresentationRushAttackBlend = 0.0f;
-    float combatPresentationRushWindupPushBlend = 0.0f;
-    bool combatPresentationRushAttackLastFrame = false;
-    bool combatPresentationRushStartedFromJustDodge = false;
     float combatPresentationPhaseElapsed = 0.0f;
     bool combatPresentationJustDodgeSignalLastFrame = false;
-    std::weak_ptr<Enemy> combatPresentationRushTarget;
     float justDodgePresentationFovOffsetDegree = -7.0f;
     float justDodgePresentationDistanceOffset = -1.7f;
     float justDodgePresentationEnterTime = 0.06f;
     float justDodgePresentationHoldTime = 0.35f;
     float justDodgePresentationExitTime = 0.45f;
-    float rushPresentationApproachSideOffset = 0.0f;
-    float rushPresentationApproachHeightOffset = 0.35f;
-    float rushPresentationApproachDistanceOffset = 1.05f;
-    float rushPresentationApproachEnterTime = 0.15f;
-    float rushPresentationWindupPushIn = 0.30f;
-    float rushPresentationWindupPushDuration = 0.12f;
-    float rushPresentationWindupPushReleaseDuration = 0.12f;
-
-    float rushPresentationIntroYawOffsetDegree = 140.0f;
-    float rushPresentationIntroSideOffset = 1.85f;
-    float rushPresentationIntroHeightOffset = 0.35f;
-    float rushPresentationIntroDistanceOffset = 1.05f;
-    float rushPresentationIntroFovDegree = 35.0f;
-    float rushPresentationIntroEnemyTargetWeight = 0.3f;
-    float rushPresentationIntroHoldTime = 0.05f;
-
-    float rushPresentationTravelYawOffsetDegree = 140.0f;
-    float rushPresentationTravelSideOffset = 1.85f;
-    float rushPresentationTravelHeightOffset = 0.35f;
-    float rushPresentationTravelDistanceOffset = -1.05f;
-    float rushPresentationTravelFovDegree = 25.0f;
-    float rushPresentationTravelEnemyTargetWeight = 0.3f;
-    float rushPresentationIntroToTravelBlendTime = 0.20f;
-    float rushPresentationTargetPitchDegree = -8.0f;
-    float rushPresentationEnterTime = 0.15f;
-    float rushPresentationRotationExitTime = 0.6f;
-    float rushPresentationPositionExitTime = 0.8f;
-    float rushPresentationFovExitTime = 1.0f;
 
     // ランタイム調査値
     DirectX::XMFLOAT3 collisionPreEyePosition{};
