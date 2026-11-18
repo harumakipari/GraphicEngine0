@@ -1,6 +1,32 @@
 {
     "animationClip": 30,
     "animationName": "TravelMode_Rgt_0",
+    "events": [
+        {
+            "parameter": "boss_walk4",
+            "time": 0.22852225601673126,
+            "type": "PlaySE",
+            "value": 0.36000001430511475
+        },
+        {
+            "parameter": "boss_walk4",
+            "time": 0.4991409182548523,
+            "type": "PlaySE",
+            "value": 0.36000001430511475
+        },
+        {
+            "parameter": "boss_walk4",
+            "time": 0.7757733464241028,
+            "type": "PlaySE",
+            "value": 0.36000001430511475
+        },
+        {
+            "parameter": "boss_walk4",
+            "time": 1.0824744701385498,
+            "type": "PlaySE",
+            "value": 0.36000001430511475
+        }
+    ],
     "loop": false,
     "nextCombo": "",
     "playRate": 0.800000011920929

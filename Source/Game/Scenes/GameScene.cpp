@@ -590,8 +590,6 @@ void GameScene::EnterBossRoomLockOnScope(const bool fromTutorialDoorMovie)
 
     bossRoomLockOnScopeActive = true;
     lockOnRequiresReleaseAfterBossRoomEntry = true;
-    lockOnInputHeldLastFrame = false;
-    lockOnTargetSelectedForHeldInput = false;
 
     if (!darkCameraActor)
         return;
@@ -744,105 +742,82 @@ void GameScene::RequestReturnToMainRoomStart()
 
 GameScene::LockOnTargetSelectionResult GameScene::UpdateLockOnTargetSelection()
 {
+    const bool lockOnHeld = InputSystem::GetInputState("LockOn", InputStateMask::Press);
+    const bool lockOnTriggered = InputSystem::GetInputState("LockOn", InputStateMask::Trigger) && !lockOnInputPressedLastFrame;
+    lockOnInputPressedLastFrame = lockOnHeld;
+
     if (!darkCameraActor || !player || battleFlowState == BattleFlowState::BossDead ||
         bossPhase == BossPhase::TransitionToPhase2)
     {
-        lockOnInputHeldLastFrame = false;
-        lockOnTargetSelectedForHeldInput = false;
-        lockOnSelectedEnemy.reset();
-        return LockOnTargetSelectionResult::NoCandidate;
-    }
-
-    const bool lockOnHeld = InputSystem::GetInputState("LockOn", InputStateMask::Press);
-    if (!lockOnHeld)
-    {
-        lockOnInputHeldLastFrame = false;
-        lockOnTargetSelectedForHeldInput = false;
-        lockOnRequiresReleaseAfterBossRoomEntry = false;
         lockOnSelectedEnemy.reset();
         return LockOnTargetSelectionResult::NoCandidate;
     }
 
     if (lockOnRequiresReleaseAfterBossRoomEntry)
-        return LockOnTargetSelectionResult::Invalidated;
-
-    if (lockOnInputHeldLastFrame)
     {
-        if (!lockOnTargetSelectedForHeldInput)
-            return LockOnTargetSelectionResult::NoCandidate;
-
-        bool shouldRelease = !darkCameraActor->HasValidLockOnTarget();
-        if (!shouldRelease)
-        {
-            // 選択済みの敵を取得
-            const auto enemy = lockOnSelectedEnemy.lock();
-
-            if (!enemy)
-            {
-                shouldRelease = true;
-            }
-            else
-            {
-                // ボス戦中のGruxは距離制限を適用しない
-                const bool isGrux = std::dynamic_pointer_cast<GruxEnemy>(enemy) != nullptr;
-                const bool ignoreDistance = isGrux && player->IsBossBattle();
-                if (!ignoreDistance)
-                {
-                    // プレイヤーと敵のXZ平面距離を計算
-                    DirectX::XMFLOAT3 delta = MathHelper::Subtract(enemy->GetPosition(), player->GetPosition());
-                    delta.y = 0.0f;
-                    const float distanceSq = MathHelper::LengthSq(delta);
-                    constexpr float releaseDistance = 11.0f;
-                    if (distanceSq > releaseDistance * releaseDistance)
-                    {
-                        shouldRelease = true;
-                    }
-                }
-            }
-        }
-        if (shouldRelease)
-        {
-            darkCameraActor->ClearEnemyHead();
-            darkCameraActor->SetRequestMode(DarkCameraActor::CameraMode::TPS);
-
-            lockOnTargetSelectedForHeldInput = false;
-            lockOnSelectedEnemy.reset();
-
-            return LockOnTargetSelectionResult::Invalidated;
-        }
-
-
-        if (!darkCameraActor->HasValidLockOnTarget())
-        {
-            darkCameraActor->ClearEnemyHead();
-            darkCameraActor->SetRequestMode(DarkCameraActor::CameraMode::TPS);
-            lockOnTargetSelectedForHeldInput = false;
-            lockOnSelectedEnemy.reset();
-            return LockOnTargetSelectionResult::Invalidated;
-        }
-        return LockOnTargetSelectionResult::Selected;
+        if (!lockOnHeld)
+            lockOnRequiresReleaseAfterBossRoomEntry = false;
+        else
+            return darkCameraActor->HasValidLockOnTarget()
+                ? LockOnTargetSelectionResult::Selected
+                : LockOnTargetSelectionResult::NoCandidate;
     }
 
-    lockOnInputHeldLastFrame = true;
-    lockOnTargetSelectedForHeldInput = false;
+    const bool hasValidLockOnTarget = darkCameraActor->HasValidLockOnTarget();
+    const auto enemy = lockOnSelectedEnemy.lock();
+    bool shouldRelease = hasValidLockOnTarget != static_cast<bool>(enemy);
+    if (!shouldRelease && hasValidLockOnTarget)
+    {
+        const bool isGrux = std::dynamic_pointer_cast<GruxEnemy>(enemy) != nullptr;
+        const bool ignoreDistance = isGrux && player->IsBossBattle();
+        if (!ignoreDistance)
+        {
+            DirectX::XMFLOAT3 delta = MathHelper::Subtract(enemy->GetPosition(), player->GetPosition());
+            delta.y = 0.0f;
+            constexpr float releaseDistance = 11.0f;
+            if (MathHelper::LengthSq(delta) > releaseDistance * releaseDistance)
+                shouldRelease = true;
+        }
+    }
+
+    if (shouldRelease)
+    {
+        darkCameraActor->ClearEnemyHead();
+        darkCameraActor->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+        lockOnSelectedEnemy.reset();
+        return LockOnTargetSelectionResult::Invalidated;
+    }
+
+    const bool lockOnActive = hasValidLockOnTarget;
+    if (!lockOnTriggered)
+        return lockOnActive ? LockOnTargetSelectionResult::Selected : LockOnTargetSelectionResult::NoCandidate;
+
+    if (lockOnActive)
+    {
+        darkCameraActor->ClearEnemyHead();
+        lockOnSelectedEnemy.reset();
+        darkCameraActor->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+        return LockOnTargetSelectionResult::NoCandidate;
+    }
+
     const auto enemies = GetActorManager()->GetActorsOfType<Enemy>();
     std::shared_ptr<Enemy> selectedEnemy;
     std::shared_ptr<SceneComponent> selectedTarget;
     float selectedDistanceSq = FLT_MAX;
     float selectedScreenDistanceSq = FLT_MAX;
     constexpr float distanceTieEpsilonSq = 0.01f;
-    for (const auto& enemy : enemies)
+    for (const auto& candidateEnemy : enemies)
     {
         std::shared_ptr<SceneComponent> target;
         float distanceSq = FLT_MAX;
         float screenDistanceSq = FLT_MAX;
-        if (!EvaluateLockOnCandidate(enemy, target, distanceSq, screenDistanceSq))
+        if (!EvaluateLockOnCandidate(candidateEnemy, target, distanceSq, screenDistanceSq))
             continue;
         const bool closer = distanceSq < selectedDistanceSq - distanceTieEpsilonSq;
         const bool tiedButMoreCentral = std::abs(distanceSq - selectedDistanceSq) <= distanceTieEpsilonSq && screenDistanceSq < selectedScreenDistanceSq;
         if (closer || tiedButMoreCentral)
         {
-            selectedEnemy = enemy;
+            selectedEnemy = candidateEnemy;
             selectedTarget = target;
             selectedDistanceSq = distanceSq;
             selectedScreenDistanceSq = screenDistanceSq;
@@ -852,13 +827,13 @@ GameScene::LockOnTargetSelectionResult GameScene::UpdateLockOnTargetSelection()
     if (selectedTarget)
     {
         darkCameraActor->SetEnemyHead(selectedTarget);
-        lockOnTargetSelectedForHeldInput = true;
         lockOnSelectedEnemy = selectedEnemy;
         return LockOnTargetSelectionResult::Selected;
     }
 
     darkCameraActor->ClearEnemyHead();
     lockOnSelectedEnemy.reset();
+    darkCameraActor->StartFocusCameraReset();
     return LockOnTargetSelectionResult::NoCandidate;
 }
 

@@ -221,8 +221,7 @@ private:
 
     // UI ActorÅiLock-onÅj   
     std::shared_ptr<GameLockOnTargetUIActor> lockOnTargetUIActor;
-    bool lockOnInputHeldLastFrame = false;
-    bool lockOnTargetSelectedForHeldInput = false;
+    bool lockOnInputPressedLastFrame = false;
 
     bool bossRoomLockOnScopeActive = false;
     bool lockOnRequiresReleaseAfterBossRoomEntry = false;

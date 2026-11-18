@@ -1,6 +1,14 @@
 {
     "animationClip": 31,
     "animationName": "Dodge_Bwd",
+    "events": [
+        {
+            "parameter": "boss_dodge",
+            "time": 0.24205325543880463,
+            "type": "PlaySE",
+            "value": 4.0
+        }
+    ],
     "loop": false,
     "nextCombo": "",
     "playRate": 0.8999999761581421,

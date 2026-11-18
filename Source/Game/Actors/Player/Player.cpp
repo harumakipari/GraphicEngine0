@@ -2703,34 +2703,15 @@ void Player::UpdateMovement()
     if (suppressMovementInput)
         intent.leftMove = { 0.0f, 0.0f, 0.0f };
     DirectX::XMFLOAT3 moveDir = { 0,0,0 };
-    bool focus = InputSystem::GetInputState("LockOn", InputStateMask::Press);
-
-
     if (auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera()))
     {
-
-        GameScene::LockOnTargetSelectionResult selectionResult =
-            GameScene::LockOnTargetSelectionResult::NoCandidate;
-        if (focus)
-        {
-            if (auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene()))
-                selectionResult = gameScene->UpdateLockOnTargetSelection();
-        }
-
-        if (!focus || selectionResult == GameScene::LockOnTargetSelectionResult::Invalidated)
-        {
-            if (!camera->IsBlendingToFocus())
-            { // Focusへの回転中は、ボタンを離しても完了まで待つ
-                camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
-            }
-        }
-        else if (selectionResult == GameScene::LockOnTargetSelectionResult::Selected)
+        if (camera->HasValidLockOnTarget())
         {
             camera->SetRequestMode(DarkCameraActor::CameraMode::LockOn);
         }
         else
         {
-            camera->SetRequestMode(DarkCameraActor::CameraMode::Focus);
+            camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
         }
         // カメラモードに応じたプレイヤー移動処理
         // 左スティック入力
@@ -3313,7 +3294,6 @@ void Player::UpdateOperationGuideUI()
 // Hpバーの更新
 void Player::UpdateHpBarUI()
 {
-    // Player HP UI uses unscaled time so HitStop / Slow do not pause its animations.
     const float currentHp = static_cast<float>((std::max)(hp, 0));
     const float uiDeltaTime = Time::UnscaledDeltaTime();
     float displayedHp = currentHp;
@@ -3415,7 +3395,6 @@ void Player::DecideLockOnDodgeDirection()
         const float inputLength = sqrtf(x * x + z * z);
         if (inputLength <= 0.1f)
         {
-            // Explicitly preserve the previous no-input behavior.
             dodgeDirection = DodgeDirection::Backward;
             return;
         }

@@ -1,6 +1,32 @@
 {
     "animationClip": 29,
     "animationName": "TravelMode_Lft_0",
+    "events": [
+        {
+            "parameter": "boss_walk4",
+            "time": 0.21048109233379364,
+            "type": "PlaySE",
+            "value": 0.36000001430511475
+        },
+        {
+            "parameter": "boss_walk4",
+            "time": 0.4810996651649475,
+            "type": "PlaySE",
+            "value": 0.36000001430511475
+        },
+        {
+            "parameter": "boss_walk4",
+            "time": 0.7938145399093628,
+            "type": "PlaySE",
+            "value": 0.36000001430511475
+        },
+        {
+            "parameter": "boss_walk4",
+            "time": 1.0945018529891968,
+            "type": "PlaySE",
+            "value": 0.36000001430511475
+        }
+    ],
     "loop": false,
     "nextCombo": "",
     "playRate": 0.800000011920929

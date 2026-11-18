@@ -165,6 +165,7 @@ public:
             mode = CameraMode::TPS;
         if (mode != CameraMode::TPS)
         {
+            isFocusCameraResetActive = false;
             CancelOffscreenAttackAssist();
         }
         if (mode == requestMode)
@@ -193,6 +194,7 @@ public:
 
     // カメラをplayerのforward方向に向ける
     void RotateToPlayerForward();
+    void StartFocusCameraReset();
     void SnapToTpsDirection(const DirectX::XMFLOAT3& direction);
 
     // 外部のカメラアクターとのブレンド用の関数
@@ -269,6 +271,7 @@ private:
 
     // ブレンド状態を更新する
     void UpdateBlend(float deltaTime);
+    void UpdateFocusCameraReset(float deltaTime);
 
     // フォーカスカメラの情報を作成する
     CameraDirectionInfo CreateFocusInfo();
@@ -394,6 +397,12 @@ private:
     float blendStartEyeDistance = 0.0f;
 
     bool isBlending = false;
+    bool isFocusCameraResetActive = false;
+    float focusCameraResetElapsed = 0.0f;
+    float focusCameraResetStartYaw = 0.0f;
+    float focusCameraResetStartPitch = 0.0f;
+    float focusCameraResetTargetYaw = 0.0f;
+    float focusCameraResetTargetPitch = 0.0f;
     std::function<void()> deathBlendFinished;
 
     // 調整値

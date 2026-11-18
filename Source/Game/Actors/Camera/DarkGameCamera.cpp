@@ -89,15 +89,23 @@ void DarkCameraActor::UpdateCameraPose(float deltaTime, const DirectX::XMFLOAT3&
 		}
 		else
 		{
-			UpdateDesiredRotation(deltaTime);
-			if (requestMode != currentMode)
+			if (isFocusCameraResetActive)
 			{
-				StartBlend(currentMode, requestMode);
+				UpdateFocusCameraReset(deltaTime);
+				currentPose = CalculatePose(currentMode, playerPos, currentYaw, currentPitch);
 			}
 			else
 			{
-				UpdateRotation(deltaTime);
-				currentPose = CalculatePose(currentMode, playerPos, currentYaw, currentPitch);
+				UpdateDesiredRotation(deltaTime);
+				if (requestMode != currentMode)
+				{
+					StartBlend(currentMode, requestMode);
+				}
+				else
+				{
+					UpdateRotation(deltaTime);
+					currentPose = CalculatePose(currentMode, playerPos, currentYaw, currentPitch);
+				}
 			}
 		}
 	}
@@ -520,6 +528,23 @@ void DarkCameraActor::RotateToPlayerForward()
 	desiredPitch = info.pitch;
 }
 
+void DarkCameraActor::StartFocusCameraReset()
+{
+	if (currentMode != CameraMode::TPS || requestMode != CameraMode::TPS || isBlending || isExternalBlending)
+		return;
+
+	const CameraDirectionInfo info = CreateFocusInfo();
+	CancelOffscreenAttackAssist();
+	isFocusCameraResetActive = true;
+	focusCameraResetElapsed = 0.0f;
+	focusCameraResetStartYaw = currentYaw;
+	focusCameraResetStartPitch = currentPitch;
+	focusCameraResetTargetYaw = info.yaw;
+	focusCameraResetTargetPitch = info.pitch;
+	desiredYaw = currentYaw;
+	desiredPitch = currentPitch;
+}
+
 // 外部のカメラアクターとのブレンド用の関数
 void DarkCameraActor::SnapToTpsDirection(const DirectX::XMFLOAT3& direction)
 {
@@ -804,6 +829,29 @@ void DarkCameraActor::UpdateBlend(float deltaTime)
 			callback();
 		}
 	}
+}
+
+void DarkCameraActor::UpdateFocusCameraReset(float deltaTime)
+{
+	const auto rightStick = inputComponent->GetIntent().rightMove;
+	if (std::abs(rightStick.x) > FLT_EPSILON || std::abs(rightStick.y) > FLT_EPSILON)
+	{
+		isFocusCameraResetActive = false;
+		UpdateDesiredRotation(deltaTime);
+		UpdateRotation(deltaTime);
+		return;
+	}
+
+	focusCameraResetElapsed += deltaTime;
+	const float t = std::clamp(focusCameraResetElapsed / (std::max)(focusBlendDuration, FLT_EPSILON), 0.0f, 1.0f);
+	currentYaw = MathHelper::LerpAngle(focusCameraResetStartYaw, focusCameraResetTargetYaw, t);
+	currentPitch = std::lerp(focusCameraResetStartPitch, focusCameraResetTargetPitch, t);
+	desiredYaw = currentYaw;
+	desiredPitch = currentPitch;
+	mainCameraComponent->SetYawAndPitch(currentYaw, currentPitch);
+
+	if (t >= 1.0f)
+		isFocusCameraResetActive = false;
 }
 
 // フォーカスカメラの情報を作成する

@@ -6,25 +6,25 @@
             "parameter": "boss_walk4",
             "time": 0.12179477512836456,
             "type": "PlaySE",
-            "value": 0.11999999731779099
+            "value": 0.41999998688697815
         },
         {
             "parameter": "boss_walk4",
-            "time": 0.2948717772960663,
+            "time": 0.29126352071762085,
             "type": "PlaySE",
-            "value": 0.12999999523162842
+            "value": 0.38999998569488525
         },
         {
             "parameter": "boss_walk4",
             "time": 0.4602561891078949,
             "type": "PlaySE",
-            "value": 0.10000000149011612
+            "value": 0.38999998569488525
         },
         {
             "parameter": "boss_walk4",
             "time": 0.6192318797111511,
             "type": "PlaySE",
-            "value": 0.10999999940395355
+            "value": 0.4000000059604645
         }
     ],
     "loop": false,
