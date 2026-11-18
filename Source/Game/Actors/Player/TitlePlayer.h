@@ -1,7 +1,5 @@
 #pragma once
-#include "Components/Controller/ControllerComponent.h"
 #include "Game/Actors/Base/Character.h"
-#include "Graphics/Renderer/TrailRenderer.h"
 
 class TitlePlayer :public Character
 {

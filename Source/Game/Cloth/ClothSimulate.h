@@ -694,7 +694,7 @@ private:
     const Mesh::Primitive* lastSimulatedPrimitive = nullptr;
 
     void FetchNodes(const tinygltf::Model& gltf_model);
-    void CumulateTransforms(std::vector<Node>& nodes);
+    void CumulateTransforms(std::vector<Node>& nodes) const;
     void FetchMeshes(ID3D11Device* device, const tinygltf::Model& gltf_model);
     Microsoft::WRL::ComPtr<ID3D11VertexShader> vertexShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader> pixelShader;

@@ -544,7 +544,7 @@ bool AnimationController::ConfigureLocalPoseOverride(const std::string& sourceAn
         return false;
 
     const auto animationIt = animationNameToIndex.find(sourceAnimationName);
-    if (animationIt == animationNameToIndex.end() | animationIt->second >= target->model->animations.size())
+    if (animationIt == animationNameToIndex.end() || animationIt->second >= target->model->animations.size())
     {
         return false;
     }

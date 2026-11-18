@@ -3,27 +3,22 @@
 #include <wrl.h>
 #include <DirectXMath.h>
 
-// SkyMap クラス: スカイボックスや環境マップを描画するクラス
 class SkyMap
 {
 public:
-    // コンストラクタ: デバイスとテクスチャファイルを受け取る
     SkyMap(ID3D11Device* device, const wchar_t* filename, bool generateMips = false);
     virtual ~SkyMap() = default;
 
-    // コピー禁止（オブジェクトの重複を防ぐ）
     SkyMap(const SkyMap&) = delete;
     SkyMap& operator =(const SkyMap&) = delete;
     SkyMap(SkyMap&&) noexcept = delete;
     SkyMap& operator =(SkyMap&&) noexcept = delete;
 
-    // スカイマップを描画する関数
+    // スカイマップを描画する
     void Blit(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4& viewProjection);
 
-    // ImGui を使ってスカイマップのパラメータを調整する関数
     void DrawImGui();
 
-    // スカイマップのテクスチャ（シェーダーリソースビュー）
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> shaderResourceView;
 private:
     // 頂点シェーダー（SkyMap 用）

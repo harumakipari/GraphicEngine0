@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "Shader.h"
 
-#include <sstream>
 #include <memory>
 
 #include "Engine/Utility/Win32Utils.h"

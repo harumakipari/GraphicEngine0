@@ -1,13 +1,7 @@
 #include "pch.h"
 #include "TitlePlayer.h"
 
-#include "Core/ActorManager.h"
 #include "Components/Render/PointLightComponent.h"
-#include "Engine/Scene/Scene.h"
-#include "Engine/Scene/SceneBase.h"
-#include "Engine/Utility/Time.h"
-
-
 
 void TitlePlayer::Initialize(const Transform& transform)
 {
@@ -71,24 +65,17 @@ void TitlePlayer::Initialize(const Transform& transform)
     // ポイントライトコンポーネントを追加
     auto pointLightComponent = this->AddComponent<PointLightComponent>("pointLightComponent", parentName);
     pointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.8f, 0.5f });
-    // ライトの名前からライトマネージャーの共有ライトを取得して設定
     pointLightComponent->SetSharedLightName("PlayerPointLight");
 
-    // ポイントライトコンポーネントを追加
     auto backPointLightComponent = this->AddComponent<PointLightComponent>("PlayerBackPointLight", parentName);
     backPointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.5f,-2.7f });
-    // ライトの名前からライトマネージャーの共有ライトを取得して設定
     backPointLightComponent->SetSharedLightName("PlayerBackPointLight");
 
-    // ポイントライトコンポーネントを追加
     auto playerPlusPointLight = this->AddComponent<PointLightComponent>("PlayerPlusPointLight", parentName);
     playerPlusPointLight->SetRelativeLocationDirect({ 0.0f, 1.6f, 0.5f });
-    // ライトの名前からライトマネージャーの共有ライトを取得して設定
     playerPlusPointLight->SetSharedLightName("PlayerPointLight");
 
-
     int weaponSocketNode = skeletalMeshComponent->FindIndexByName("weapon");
-
 
     // 剣のメッシュコンポーネントを追加
     swordMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
@@ -100,7 +87,6 @@ void TitlePlayer::Initialize(const Transform& transform)
     swordMeshComponent->overrideForwardPipelineName = "GltfModelPlayerWeaponForwardPS";
 
 
-
 }
 
 void TitlePlayer::Update(float deltaTime)
@@ -109,8 +95,8 @@ void TitlePlayer::Update(float deltaTime)
 
     // これは絶対入れる　アニメーションの更新をしているから
     Character::Update(deltaTime);
-
-    SetPosition({ -25.302f,0.004f,12.205f });
+    DirectX::XMFLOAT3 playerPos = { -25.302f,0.004f,12.205f };
+    SetPosition(playerPos);
 
 }
 

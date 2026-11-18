@@ -203,7 +203,7 @@ void ClothSimulate::FetchNodes(const tinygltf::Model& gltfModel)
     CumulateTransforms(nodes);
 }
 
-void ClothSimulate::CumulateTransforms(std::vector<Node>& nodes)
+void ClothSimulate::CumulateTransforms(std::vector<Node>& nodes) const
 {
     std::function<void(int, int)> traverse = [&](int parentIndex, int nodeIndex)->void
         {

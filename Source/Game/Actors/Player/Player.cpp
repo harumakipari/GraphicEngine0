@@ -7,7 +7,6 @@
 #endif
 
 #include "Graphics/Core/Graphics.h"
-#include "Physics/Physics.h"
 #include "Core/ActorManager.h"
 #include "Components/Render/PointLightComponent.h"
 #include "PlayerStateDerived.h"
@@ -716,9 +715,9 @@ void Player::DrawImGuiDetails()
         if (ImGui::TreeNode(U8("剣の軌跡と残像")))
         {
             ImGui::DragFloat(U8("軌跡が残る時間"), &trailRemainTime, 0.1f);
-            ImGui::DragFloat(U8("残像が残る時間"), &ghostFadeTime, 0.1f);
+            ImGui::DragFloat(U8("残像が残る時間"), &ghostFadeTime, 0.1f, 0.001f, FLT_MAX, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
             ImGui::DragFloat(U8("残像のemissive色"), &swordGhostEmissive, 0.1f);
-            ImGui::DragFloat(U8("残像を出す間隔"), &ghostInterval, 0.001f, 0.0f, 1.0f, "%.5f");
+            ImGui::DragFloat(U8("残像を出す間隔"), &ghostInterval, 0.001f, 0.001f, 1.0f, "%.5f", ImGuiSliderFlags_AlwaysClamp);
             ImGui::DragFloat(U8("残像の輪郭"), &ghostEdgeWidth);
             const bool normalGhostEdgeColorChanged = ImGui::ColorEdit3(U8("残像のエッジの色"), &swordGhostColor.x);
             const bool rushGhostEdgeColorChanged = ImGui::ColorEdit3(U8("ラッシュ残像のエッジの色"), &rushSwordColor.x);
@@ -2865,6 +2864,10 @@ void Player::UpdateMovementWithMotionWarp(float deltaTime)
 void Player::UpdateSwordGhosts(const float deltaTime)
 {
     using namespace DirectX;
+    constexpr float minimumGhostInterval = 0.001f;
+    constexpr float minimumGhostFadeTime = 0.001f;
+    const float safeGhostInterval = ghostInterval > 0.0f ? ghostInterval : minimumGhostInterval;
+    const float safeGhostFadeTime = ghostFadeTime > 0.0f ? ghostFadeTime : minimumGhostFadeTime;
     if (showTrail)
     {
         XMFLOAT4X4 currentWorld = swordMeshComponent->GetComponentWorldTransform().ToWorldTransform();
@@ -2890,9 +2893,9 @@ void Player::UpdateSwordGhosts(const float deltaTime)
         };
 
         swordGhostElapsedTime += deltaTime;
-        while (swordGhostElapsedTime >= ghostInterval)
+        while (swordGhostElapsedTime >= safeGhostInterval)
         {
-            swordGhostElapsedTime -= ghostInterval;
+            swordGhostElapsedTime -= safeGhostInterval;
 
             float t = 1.0f - swordGhostElapsedTime / deltaTime;
 
@@ -2916,7 +2919,7 @@ void Player::UpdateSwordGhosts(const float deltaTime)
     // 剣の残像用の剣のメッシュコンポーネント
     for (auto& ghost : ghosts)
     {
-        ghost.alpha -= deltaTime / ghostFadeTime;
+        ghost.alpha -= deltaTime / safeGhostFadeTime;
 
         if (ghost.alpha <= 0)
         {

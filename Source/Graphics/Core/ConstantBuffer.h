@@ -1,8 +1,6 @@
 #pragma once
 
 #include <d3d11.h>
-#include <wrl.h>
-#include <assert.h>
 #include "Engine/Utility/Win32Utils.h"
 
 template<class T>

@@ -24,7 +24,7 @@
 class EffectLoadTicket;
 
 //シーンの状態を表す列挙型
-enum class SCENE_STATE
+enum class SCENE_STATE:uint8_t
 {
     awaiting,			// 待機中
     initializing,		// 初期化中
@@ -65,8 +65,8 @@ public:
     static void RegisterPreloadEffectTicket(const std::shared_ptr<EffectLoadTicket>& ticket);
 
     // ActorManager の取得
-    const ActorManager* GetActorManager() const { return actorManager_.get(); }
-    ActorManager* GetActorManager() { return actorManager_.get(); }
+    const ActorManager* GetActorManager() const { return actorManager.get(); }
+    ActorManager* GetActorManager() { return actorManager.get(); }
     const UIManager* GetUIManager() const { return uiManager.get(); }
     UIManager* GetUIManager() { return uiManager.get(); }
 
@@ -96,9 +96,9 @@ private:
     //シーンが始まったとき
     virtual void Start() {};
     // 純粋仮想関数：シーンの更新
-    virtual void Update(float delta_time) = 0;
+    virtual void Update(float deltaTime) = 0;
     // 純粋仮想関数：シーンの描画
-    virtual void Render(ID3D11DeviceContext* immediate_context, float delta_time) = 0;
+    virtual void Render(ID3D11DeviceContext* immediateContext, float deltaTime) = 0;
     // 仮想関数：シーンの終了処理
     virtual bool Uninitialize(ID3D11Device* device)
     {
@@ -126,7 +126,6 @@ protected:
     virtual void SetUpActors() {}
 public:
     // テンプレート関数：シーンの初期化
-    //template<class _boot_scene>
     static bool _boot(ID3D11Device* device, std::string name, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props)
     {
         //シーンが _reflections() に登録されているかチェック
@@ -135,8 +134,8 @@ public:
         _current_scene = _reflections().at(name)();
         _current_scene->State(SCENE_STATE::initializing);
         // ActorManager の生成
-        _current_scene->actorManager_ = std::make_unique<ActorManager>();
-        _current_scene->actorManager_->SetOwnerScene(_current_scene.get());
+        _current_scene->actorManager = std::make_unique<ActorManager>();
+        _current_scene->actorManager->SetOwnerScene(_current_scene.get());
 
         _current_scene->Initialize(device, width, height, props);
         if (!_current_scene->GetActorManager())
@@ -185,9 +184,9 @@ private:
             _future.wait();
         }
         // actorManager の破棄処理
-        if (_current_scene->actorManager_)
+        if (_current_scene->actorManager)
         {
-            _current_scene->actorManager_->ClearAll();
+            _current_scene->actorManager->ClearAll();
         }
         // 現在のシーンの後処理を実行
         _current_scene->Uninitialize(device);
@@ -344,7 +343,7 @@ protected:
     };
 
 private:
-    std::unique_ptr<ActorManager> actorManager_;
+    std::unique_ptr<ActorManager> actorManager;
     bool paused = false;
 protected:
     std::unique_ptr<UIManager> uiManager;

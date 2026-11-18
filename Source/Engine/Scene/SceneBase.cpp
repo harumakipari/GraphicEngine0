@@ -279,11 +279,11 @@ bool SceneBase::OnSizeChanged(ID3D11Device* device, const UINT64 width, UINT hei
         {
             Logger::Log(U8("シーンエフェクトを作成しました！"));
             sceneEffectManager = std::make_unique<SceneEffectManager>();
-            sceneEffectManager->AddEffect(std::make_unique<FogEffect>());
+            sceneEffectManager->AddEffect(std::make_unique<BloomEffect>());
             sceneEffectManager->AddEffect(std::make_unique<SSAOEffect>());
             sceneEffectManager->AddEffect(std::make_unique<SSREffect>());
+            sceneEffectManager->AddEffect(std::make_unique<FogEffect>());
             sceneEffectManager->AddEffect(std::make_unique<DepthOfFieldEffect>());
-            sceneEffectManager->AddEffect(std::make_unique<BloomEffect>());
             sceneEffectManager->Initialize(device, static_cast<uint32_t>(width), height);
         }
     }

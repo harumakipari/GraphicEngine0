@@ -63,9 +63,9 @@ bool Scene::_update(ID3D11DeviceContext* immediateContext, float deltaTime)
     }
 
     // 現在のActorManagerの更新処理
-    if (_current_scene->actorManager_)
+    if (_current_scene->actorManager)
     {
-        _current_scene->actorManager_->Update(deltaTime);
+        _current_scene->actorManager->Update(deltaTime);
     }
     // 現在のシーンの更新処理
     _current_scene->Update(deltaTime);
@@ -83,9 +83,9 @@ bool Scene::_update(ID3D11DeviceContext* immediateContext, float deltaTime)
         _current_scene->State(SCENE_STATE::uninitializing);
 
         // actorManager の破棄処理
-        if (_current_scene->actorManager_)
+        if (_current_scene->actorManager)
         {
-            _current_scene->actorManager_->ClearAll();
+            _current_scene->actorManager->ClearAll();
         }
         // 現在のシーンの後処理
         _current_scene->Uninitialize(device.Get());
@@ -111,8 +111,8 @@ bool Scene::_update(ID3D11DeviceContext* immediateContext, float deltaTime)
             // シーンの状態を「初期化中」に変更
             _next_scene->State(SCENE_STATE::initializing);
             // ActorManager の生成
-            _next_scene->actorManager_ = std::make_unique<ActorManager>();
-            _next_scene->actorManager_->SetOwnerScene(_next_scene.get());
+            _next_scene->actorManager = std::make_unique<ActorManager>();
+            _next_scene->actorManager->SetOwnerScene(_next_scene.get());
             // シーンの初期化処理（デバイス、画面サイズ、プロパティ情報を渡す）
             _next_scene->Initialize(device.Get(), static_cast<UINT64>(viewport.Width), static_cast<UINT64>(viewport.Height), _payload);
             // シーンの状態を「初期化済み」に変更
@@ -144,7 +144,7 @@ bool Scene::_async_preload_scene(ID3D11Device* device, UINT64 width, UINT height
     }
 
     // シーンが登録済みであることを確認（なければエラー）
-    _ASSERT_EXPR(_reflections().find(name) != _reflections().end(), L"Not found scene name in _alchemists");
+    _ASSERT_EXPR(_reflections().find(name) != _reflections().end(), L"Not found scene name in _reflections");
 
     // 新しいプリロード用のシーンを作成
     _preload_scene = _reflections().at(name)();
@@ -164,8 +164,8 @@ bool Scene::_async_preload_scene(ID3D11Device* device, UINT64 width, UINT height
                 try
                 {
                 // ActorManager の生成
-                _preload_scene->actorManager_ = std::make_unique<ActorManager>();
-                _preload_scene->actorManager_->SetOwnerScene(_preload_scene.get());
+                _preload_scene->actorManager = std::make_unique<ActorManager>();
+                _preload_scene->actorManager->SetOwnerScene(_preload_scene.get());
                 _preload_scene->State(SCENE_STATE::initializing);// 状態を「初期化中」に設定
                 bool success = _preload_scene->Initialize(device, width, height, props);
                 _preload_scene->State(SCENE_STATE::initialized);// 状態を「初期化完了」に設定

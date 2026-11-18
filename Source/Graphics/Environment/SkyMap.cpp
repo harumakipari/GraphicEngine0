@@ -4,7 +4,6 @@
 #include "Graphics/Resource/Texture.h"
 #include "Graphics/Core/Shader.h"
 
-// SkyMap クラスのコンストラクタ
 SkyMap::SkyMap(ID3D11Device* device, const wchar_t* filename, bool generateMips)
 {
     HRESULT hr = S_OK;

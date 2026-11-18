@@ -33,7 +33,7 @@ void DarkClothActor::Update(float deltaTime)
     }
 }
 
-void DarkClothActor::RenderCloth(ID3D11DeviceContext* immediateContext)
+void DarkClothActor::RenderCloth(ID3D11DeviceContext* immediateContext) const
 {
     if (clothSimulate && clothSimulate->IsClothRenderingEnabled())
     {

@@ -3,6 +3,7 @@
 #include <wrl.h>
 #include <d3d11.h>
 #include <vector>
+
 // サンプラステート
 enum class SAMPLER_STATE :uint8_t
 {
@@ -59,12 +60,6 @@ private:
     RenderState() = default;
     virtual ~RenderState() = default;
 public:
-    // インスタンス取得
-    //static RenderState& Instance()
-    //{
-    //    static RenderState instance;
-    //    return instance;
-    //}
     // 初期化
     static void Initialize();
 

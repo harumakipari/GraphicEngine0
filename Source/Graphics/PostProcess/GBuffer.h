@@ -1,10 +1,7 @@
-#ifndef GBUFFER_H
-#define GBUFFER_H
+#pragma once
 
 #include <d3d11.h>
-#include <wrl.h>
 #include <cstdint>
-//#include "MultipleRenderTargets.h"
 #include "Engine/Utility/Win32Utils.h"
 
 enum class SRV_SLOT :uint8_t
@@ -23,7 +20,6 @@ class GBuffer
 public:
     GBuffer(ID3D11Device* device, UINT width, UINT height)
     {
-#if 1
         HRESULT hr = S_OK;
         for (UINT bufferIndex = 0; bufferIndex < GBufferCount; bufferIndex++)
         {
@@ -97,7 +93,6 @@ public:
             viewports[bufferIndex].TopLeftX = 0.0f;
             viewports[bufferIndex].TopLeftY = 0.0f;
         }
-#endif // 0
     }
 
     virtual ~GBuffer()
@@ -152,10 +147,6 @@ public:
     }
     void Deactivate(ID3D11DeviceContext* immediateContext)
     {
-#if 0
-        // None that unlike some other reource methods in Direct3D, all currently bound render targets will be unbound by calling OMSetRenderTargets(0, nullptr, nullptr);
-        immediateContext->OMSetRenderTargets(0, NULL, NULL);
-#endif
         immediateContext->RSSetViewports(viewportCount, catchedViewports);
         immediateContext->OMSetRenderTargets(bufferCount, catchedRenderTargetViews, catchedDepthStencilView);
         for (UINT bufferIndex = 0; bufferIndex < bufferCount; ++bufferIndex)
@@ -179,7 +170,7 @@ private:
     static constexpr DXGI_FORMAT GBufferFormats[GBufferCount] =
     {
         DXGI_FORMAT_R16G16B16A16_FLOAT, // Scene Color
-        DXGI_FORMAT_R8G8B8A8_UNORM,  //  albedo Opacity + Mask??とか？
+        DXGI_FORMAT_R8G8B8A8_UNORM,  //  albedo Opacity + Mask
         DXGI_FORMAT_R16G16B16A16_FLOAT, // マテリアルの情報
         DXGI_FORMAT_R16G16B16A16_FLOAT, // Normal
         DXGI_FORMAT_R16G16B16A16_FLOAT, // emissive
@@ -188,5 +179,4 @@ private:
     };
 };
 
-#endif // !GBUFFER_H
 

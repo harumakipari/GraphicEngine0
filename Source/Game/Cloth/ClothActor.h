@@ -12,7 +12,7 @@ public:
     void Update(float deltaTime)override;
 
     // •z‚ð•`‰æ‚·‚é
-    void RenderCloth(ID3D11DeviceContext* immediateContext);
+    void RenderCloth(ID3D11DeviceContext* immediateContext) const;
 
 private:
     std::string parentName = "RootComponent";

@@ -666,9 +666,6 @@
     <ClInclude Include="Source\Graphics\Core\PipelineLibrary.h">
       <Filter>Source\Graphics\Core</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Graphics\Core\PrecomputedNoiseTexture3d.h">
-      <Filter>Source\Graphics\Core</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Graphics\Core\RenderState.h">
       <Filter>Source\Graphics\Core</Filter>
     </ClInclude>

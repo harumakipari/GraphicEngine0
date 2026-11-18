@@ -1,10 +1,9 @@
 #pragma once
 #include <d3d11.h>
 #include "tiny_gltf.h"
-#include "Engine/Utility/Win32Utils.h"
 
 // DXGI_FORMAT の要素サイズ（1要素分）を返す
-inline UINT GetFormatByteSize(DXGI_FORMAT format)
+inline UINT GetFormatByteSize(const DXGI_FORMAT format)
 {
     switch (format)
     {

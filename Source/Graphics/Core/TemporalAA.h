@@ -1,7 +1,5 @@
 #pragma once
 #include <d3d11.h>
-#include <wrl.h>
-#include <cstdint>
 #include "Engine/Utility/Win32Utils.h"
 
 class RenderTarget
@@ -129,39 +127,14 @@ public:
             history[previous].srv.Get(),
         };
 
-#if 1
         RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
-        fullscreenQuad->Blit(
-            immediateContext,
-            srvs,
-            0,
-            _countof(srvs),
-            copyPs.Get());
-#else
-        Microsoft::WRL::ComPtr<ID3D11Resource> srcResource;
+        fullscreenQuad->Blit(immediateContext, srvs, 0, _countof(srvs), copyPs.Get()); std::swap(current, previous);
 
-        sceneColor->GetResource(srcResource.GetAddressOf());
-
-        immediateContext->CopyResource(
-            history[current].texture.Get(),
-            srcResource.Get());
-#endif // 0
-        std::swap(current, previous);
-
-        //immediateContext->RSSetViewports(viewportCount, cachedViewPorts);
-
-
-        immediateContext->PSSetShaderResources(
-            0,
-            16,
-            nullSRVs);
+        immediateContext->PSSetShaderResources(0, 16, nullSRVs);
 
         immediateContext->RSSetViewports(viewportCount, cachedViewPorts);
 
-        immediateContext->OMSetRenderTargets(
-            1,
-            &oldRTV,
-            oldDSV);
+        immediateContext->OMSetRenderTargets(1, &oldRTV, oldDSV);
 
         if (oldRTV)
         {

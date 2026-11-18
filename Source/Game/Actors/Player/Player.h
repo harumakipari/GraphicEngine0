@@ -117,9 +117,7 @@ public:
 		float animationTimer = 0.0f; // 点滅アニメーションの経過時間
 	};
 
-
 public:
-	// モデル名を指定してPlayerを生成する。
 	explicit Player(const std::string& modelName) :Character(modelName) {}
 
 	void Initialize(const Transform& transform)override;
