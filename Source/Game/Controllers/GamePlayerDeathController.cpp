@@ -1,13 +1,13 @@
 #include "pch.h"
 #include "GamePlayerDeathController.h"
 #include "Game/Actors/Player/Player.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
+#include "Game/Actors/Enemy/Boss/GruxEnemy.h"
 #include "Game/Actors/UI/GameDefeatUIActor.h"
-#include "Game/DarkGame/GameBgmDirector.h"
 #include "Game/Actors/Camera/Camera.h"
 #include "Game/Actors/Camera/DarkGameCamera.h"
 #include "Engine/Input/InputSystem.h"
 #include "Engine/Audio/Audio.h"
+#include "Game/Actors/Bgm/GameBgmDirector.h"
 
 void GamePlayerDeathController::SetCueCallback(std::function<void(Cue)> callback)
 {

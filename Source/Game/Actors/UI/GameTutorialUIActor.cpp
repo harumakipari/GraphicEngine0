@@ -3,7 +3,7 @@
 #include "Components/Render/MeshComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Game/Actors/Camera/DarkGameCamera.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/SkeletonWarriorEnemy.h"
+#include "Game/Actors/Enemy/SkeletonWarriorEnemy.h"
 #include "Physics/CollisionFunction.h"
 #include "UI/UIManager.h"
 

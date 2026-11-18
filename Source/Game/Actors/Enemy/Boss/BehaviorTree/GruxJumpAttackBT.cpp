@@ -1,19 +1,17 @@
 #include "pch.h"
 #include "GruxJumpAttackBT.h"
 #include "GruxDashAttackBT.h"
-#include "NodeBase.h"
 #include "Engine/Scene/Scene.h"
+#include "Game/Actors/Enemy/Boss/GruxEnemy.h"
 #include "Game/Scenes/GameScene.h"
 #include "Game/Actors/Player/Player.h"
 
-// Shared phase query
 bool GruxEnemy::IsBossInFinalPhase() const
 {
 	const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
 	return scene && scene->IsBossInFinalPhase();
 }
 
-// Jump telegraph visuals
 void GruxEnemy::ShowJumpTelegraphForCurrentJump()
 {
 	if (!jumpTelegraphMeshComponent)

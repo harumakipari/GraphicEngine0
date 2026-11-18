@@ -1,9 +1,9 @@
 #include "pch.h"
 #include "GruxDashAttackBT.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
+#include "Game/Actors/Enemy/Boss/GruxEnemy.h"
 #include "Game/Scenes/GameScene.h"
 
-// Dash telegraph visuals
+
 void GruxEnemy::BeginDashTelegraphVisual()
 {
 	HideDashTelegraphVisual();

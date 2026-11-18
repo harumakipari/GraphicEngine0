@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "GameBgmDirector.h"
-#include "Game/Actors/BgmActor.h"
+
+#include "BgmActor.h"
 #ifdef USE_IMGUI
 #include <imgui.h>
 #endif

@@ -2,7 +2,7 @@
 #include "DarkGameCamera.h"
 #include "Game/Actors/Player/Player.h"
 #include "Game/Actors/Enemy/Enemy.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
+#include "Game/Actors/Enemy/Boss/GruxEnemy.h"
 #include "Physics/CollisionFunction.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Utility/Time.h"

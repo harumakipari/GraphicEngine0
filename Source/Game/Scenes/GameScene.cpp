@@ -1,10 +1,5 @@
 #include "pch.h"
 #include "GameScene.h"
-#include "Game/DarkGame/GameBossDeathController.h"
-#include "Game/DarkGame/GamePlayerDeathController.h"
-#include "Game/DarkGame/GameVictoryController.h"
-#include "Game/DarkGame/GamePhase2TransitionController.h"
-#include "UI/Game/SceneTransitionManager.h"
 #include <json.hpp>
 #include <fstream>
 #include <filesystem>
@@ -30,21 +25,19 @@
 #include "Game/Actors/UI/GameVictoryUIActor.h"
 #include "Game/Actors/UI/GameMovieSkipUIActor.h"
 
-
 #include "Game/DarkGame/DarkActors/DarkStage.h"
 #include "Game/DarkGame/DarkActors/DarkStageChandelierActor.h"
 #include "Game/DarkGame/DarkActors/DoorActor.h"
 #include "Game/DarkGame/DarkActors/ModelDebrisEmitterActor.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/SkeletonWarriorEnemy.h"
+#include "Game/Actors/Enemy/Boss/GruxEnemy.h"
+#include "Game/Actors/Enemy/SkeletonWarriorEnemy.h"
 #include "Physics/Physics.h"
 #include "Physics/CollisionFunction.h"
 
 #include "Physics/CollisionSystem.h"
 #include "UI/UIManager.h"
 #include "UI/Game/Pause.h"
-
-
+#include "UI/Game/SceneTransitionManager.h"
 
 bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props)
 {

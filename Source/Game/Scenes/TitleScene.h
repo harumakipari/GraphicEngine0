@@ -6,7 +6,7 @@
 #include <memory>
 
 #include "Engine/Scene/SceneBase.h"
-#include "Game/Actors/BgmActor.h"
+#include "Game/Actors/Bgm/BgmActor.h"
 #include "Game/Actors/Camera/Camera.h"
 #include "Game/Actors/Player/TitlePlayer.h"
 #include "Game/DarkGame/DarkActors/DarkStageAsset.h"

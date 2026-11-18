@@ -19,7 +19,7 @@
 #include "Game/Scenes/GameScene.h"
 #include "Game/DarkGame/Interactable.h"
 #include "Game/DarkGame/DarkActors/InteractableActor.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
+#include "Game/Actors/Enemy/Boss/GruxEnemy.h"
 #include "Physics/CollisionFunction.h"
 
 void Player::Initialize(const Transform& transform)

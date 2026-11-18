@@ -2,7 +2,7 @@
 #include "PlayerStateDerived.h"
 #include "Game/Actors/Base/Character.h"
 #include "Game/Actors/Enemy/Enemy.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
+#include "Game/Actors/Enemy/Boss/GruxEnemy.h"
 #include "Game/Actors/Player/Player.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneBase.h"

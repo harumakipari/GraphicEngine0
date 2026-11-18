@@ -1,7 +1,7 @@
 #pragma once
 #include "ActionBase.h"
 #include "JudgementBase.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
+#include "Game/Actors/Enemy/Boss/GruxEnemy.h"
 
 // €–Sˆ—‚ğŠJn‚·‚é
 class BTStartDeath : public ActionBase

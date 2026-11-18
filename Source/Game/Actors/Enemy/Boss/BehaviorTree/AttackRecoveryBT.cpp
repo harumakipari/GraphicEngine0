@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "AttackRecoveryBT.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
+#include "Game/Actors/Enemy/Boss/GruxEnemy.h"
 
 ActionBase::State ExecuteAttackRecovery::Run(float deltaTime)
 {

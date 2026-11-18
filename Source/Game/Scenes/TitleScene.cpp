@@ -1,11 +1,6 @@
 #include "pch.h"
 #include "TitleScene.h"
 
-#ifdef USE_IMGUI
-#define IMGUI_ENABLE_DOCKING
-#include "imgui.h"
-#endif
-
 #include "Components/Audio/AudioSourceComponent.h"
 #include "Engine/Audio/Audio.h"
 #include "Engine/Framework/Framework.h"
@@ -23,7 +18,7 @@
 #include "Game/DarkGame/DarkActors/DarkTitleStage.h"
 #include "Game/DarkGame/DarkActors/DoorActor.h"
 #include "Game/DarkGame/DarkActors/LanternActor.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
+#include "Game/Actors/Enemy/Boss/GruxEnemy.h"
 
 #include "Physics/CollisionSystem.h"
 #include "UI/UIManager.h"

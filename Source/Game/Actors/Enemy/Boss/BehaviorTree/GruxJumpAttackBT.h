@@ -1,7 +1,6 @@
 #pragma once
 #include "ActionBase.h"
 #include "JudgementBase.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 
 class CanPlanJumpAttack : public JudgementBase
 {

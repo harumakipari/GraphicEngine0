@@ -169,9 +169,6 @@
     <ClCompile Include="Source\Game\Actors\UI\GameTimerUIActor.cpp">
       <Filter>Source\Game\Actors\UI</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\Actors\BgmActor.cpp">
-      <Filter>Source\Game\Actors</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Game\Actors\Camera\Camera.cpp">
       <Filter>Source\Game\Actors\Camera</Filter>
     </ClCompile>
@@ -229,34 +226,7 @@
     <ClCompile Include="Source\Game\DarkGame\DarkActors\LanternActor.cpp">
       <Filter>Source\Game\DarkGame\DarkActors</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemy.cpp">
-      <Filter>Source\Game\DarkGame\DarkActors\DarkEnemy</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\SkeletonBodyPartActor.cpp">
-      <Filter>Source\Game\DarkGame\DarkActors\DarkEnemy</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\SkeletonWarriorEnemy.cpp">
-      <Filter>Source\Game\DarkGame\DarkActors\DarkEnemy</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Game\Scenes\LoadingScene.cpp">
-      <Filter>Source\Game\Scenes</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\GameBgmDirector.cpp">
-      <Filter>Source\Game\Scenes</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\GameBossDeathController.cpp">
-      <Filter>Source\Game\Scenes</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\GamePlayerDeathController.cpp">
-      <Filter>Source\Game\Scenes</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\GameVictoryController.cpp">
-      <Filter>Source\Game\Scenes</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\GamePhase2TransitionController.cpp">
-      <Filter>Source\Game\Scenes</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\GameTutorialController.cpp">
       <Filter>Source\Game\Scenes</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\Scenes\GameScene.cpp">
@@ -388,32 +358,62 @@
     <ClCompile Include="Source\Animation\BlendSpaceAnimation.cpp">
       <Filter>Source\Animation</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\GruxChargeAttackBT.cpp">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    <ClCompile Include="Source\Game\Actors\Enemy\SkeletonWarriorEnemy.cpp">
+      <Filter>Source\Game\Actors\Enemy</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\GruxRoarBT.cpp">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    <ClCompile Include="Source\Game\Actors\Enemy\SkeletonBodyPartActor.cpp">
+      <Filter>Source\Game\Actors\Enemy</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\GruxDashAttackBT.cpp">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    <ClCompile Include="Source\Game\Actors\Enemy\Boss\GruxEnemy.cpp">
+      <Filter>Source\Game\Actors\Enemy\Boss</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\AttackRecoveryBT.cpp">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    <ClCompile Include="Source\Game\Actors\Enemy\Boss\BehaviorTree\GruxFastComboBT.cpp">
+      <Filter>Source\Game\Actors\Enemy\Boss\BehaviorTree</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\BehaviorData.cpp">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    <ClCompile Include="Source\Game\Actors\Enemy\Boss\BehaviorTree\BehaviorData.cpp">
+      <Filter>Source\Game\Actors\Enemy\Boss\BehaviorTree</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\BehaviorTree.cpp">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    <ClCompile Include="Source\Game\Actors\Enemy\Boss\BehaviorTree\BehaviorTree.cpp">
+      <Filter>Source\Game\Actors\Enemy\Boss\BehaviorTree</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\NodeBase.cpp">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    <ClCompile Include="Source\Game\Actors\Enemy\Boss\BehaviorTree\GruxJumpAttackBT.cpp">
+      <Filter>Source\Game\Actors\Enemy\Boss\BehaviorTree</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\GruxFastComboBT.cpp">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    <ClCompile Include="Source\Game\Actors\Enemy\Boss\BehaviorTree\AttackRecoveryBT.cpp">
+      <Filter>Source\Game\Actors\Enemy\Boss\BehaviorTree</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\GruxJumpAttackBT.cpp">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    <ClCompile Include="Source\Game\Actors\Enemy\Boss\BehaviorTree\GruxDashAttackBT.cpp">
+      <Filter>Source\Game\Actors\Enemy\Boss\BehaviorTree</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Enemy\Boss\BehaviorTree\GruxChargeAttackBT.cpp">
+      <Filter>Source\Game\Actors\Enemy\Boss\BehaviorTree</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Enemy\Boss\BehaviorTree\GruxRoarBT.cpp">
+      <Filter>Source\Game\Actors\Enemy\Boss\BehaviorTree</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Enemy\Boss\BehaviorTree\NodeBase.cpp">
+      <Filter>Source\Game\Actors\Enemy\Boss\BehaviorTree</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Bgm\BgmActor.cpp">
+      <Filter>Source\Game\Actors\Bgm</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Bgm\GameBgmDirector.cpp">
+      <Filter>Source\Game\Actors\Bgm</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Controllers\GameBossDeathController.cpp">
+      <Filter>Source\Game\Controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Controllers\GamePhase2TransitionController.cpp">
+      <Filter>Source\Game\Controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Controllers\GamePlayerDeathController.cpp">
+      <Filter>Source\Game\Controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Controllers\GameTutorialController.cpp">
+      <Filter>Source\Game\Controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Controllers\GameVictoryController.cpp">
+      <Filter>Source\Game\Controllers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -609,9 +609,6 @@
     <ClInclude Include="Source\Utility\SceneJsonUtils.h">
       <Filter>Source\Utility</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Game\Actors\BgmActor.h">
-      <Filter>Source\Game\Actors</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Game\Actors\Camera\Camera.h">
       <Filter>Source\Game\Actors\Camera</Filter>
     </ClInclude>
@@ -681,34 +678,7 @@
     <ClInclude Include="Source\Game\DarkGame\DarkActors\LanternActor.h">
       <Filter>Source\Game\DarkGame\DarkActors</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemy.h">
-      <Filter>Source\Game\DarkGame\DarkActors\DarkEnemy</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\SkeletonBodyPartActor.h">
-      <Filter>Source\Game\DarkGame\DarkActors\DarkEnemy</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\SkeletonWarriorEnemy.h">
-      <Filter>Source\Game\DarkGame\DarkActors\DarkEnemy</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Game\Scenes\LoadingScene.h">
-      <Filter>Source\Game\Scenes</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\GameBgmDirector.h">
-      <Filter>Source\Game\Scenes</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\GameBossDeathController.h">
-      <Filter>Source\Game\Scenes</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\GamePlayerDeathController.h">
-      <Filter>Source\Game\Scenes</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\GameVictoryController.h">
-      <Filter>Source\Game\Scenes</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\GamePhase2TransitionController.h">
-      <Filter>Source\Game\Scenes</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\GameTutorialController.h">
       <Filter>Source\Game\Scenes</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Scenes\GameScene.h">
@@ -894,39 +864,6 @@
     <ClInclude Include="Source\Animation\BlendSpaceAnimation.h">
       <Filter>Source\Animation</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\BehaviorTree.h">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\NodeBase.h">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\JudgementBase.h">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\ActionBase.h">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\GruxChargeAttackBT.h">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\GruxRoarBT.h">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\GruxDashAttackBT.h">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\AttackRecoveryBT.h">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\BehaviorData.h">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\GruxFastComboBT.h">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\GruxJumpAttackBT.h">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Game\Actors\UI\GameMovieSkipUIActor.h">
       <Filter>Source\Game\Actors\UI</Filter>
     </ClInclude>
@@ -944,6 +881,69 @@
     </ClInclude>
     <ClInclude Include="Source\Game\Actors\UI\GameTimerUIActor.h">
       <Filter>Source\Game\Actors\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Enemy\SkeletonWarriorEnemy.h">
+      <Filter>Source\Game\Actors\Enemy</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Enemy\SkeletonBodyPartActor.h">
+      <Filter>Source\Game\Actors\Enemy</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Enemy\Boss\GruxEnemy.h">
+      <Filter>Source\Game\Actors\Enemy\Boss</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Enemy\Boss\BehaviorTree\ActionBase.h">
+      <Filter>Source\Game\Actors\Enemy\Boss\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Enemy\Boss\BehaviorTree\GruxFastComboBT.h">
+      <Filter>Source\Game\Actors\Enemy\Boss\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Enemy\Boss\BehaviorTree\BehaviorData.h">
+      <Filter>Source\Game\Actors\Enemy\Boss\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Enemy\Boss\BehaviorTree\BehaviorTree.h">
+      <Filter>Source\Game\Actors\Enemy\Boss\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Enemy\Boss\BehaviorTree\GruxJumpAttackBT.h">
+      <Filter>Source\Game\Actors\Enemy\Boss\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Enemy\Boss\BehaviorTree\AttackRecoveryBT.h">
+      <Filter>Source\Game\Actors\Enemy\Boss\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Enemy\Boss\BehaviorTree\GruxDashAttackBT.h">
+      <Filter>Source\Game\Actors\Enemy\Boss\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Enemy\Boss\BehaviorTree\GruxChargeAttackBT.h">
+      <Filter>Source\Game\Actors\Enemy\Boss\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Enemy\Boss\BehaviorTree\GruxRoarBT.h">
+      <Filter>Source\Game\Actors\Enemy\Boss\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Enemy\Boss\BehaviorTree\JudgementBase.h">
+      <Filter>Source\Game\Actors\Enemy\Boss\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Enemy\Boss\BehaviorTree\NodeBase.h">
+      <Filter>Source\Game\Actors\Enemy\Boss\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Bgm\BgmActor.h">
+      <Filter>Source\Game\Actors\Bgm</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Bgm\GameBgmDirector.h">
+      <Filter>Source\Game\Actors\Bgm</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Controllers\GameBossDeathController.h">
+      <Filter>Source\Game\Controllers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Controllers\GamePhase2TransitionController.h">
+      <Filter>Source\Game\Controllers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Controllers\GamePlayerDeathController.h">
+      <Filter>Source\Game\Controllers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Controllers\GameTutorialController.h">
+      <Filter>Source\Game\Controllers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Controllers\GameVictoryController.h">
+      <Filter>Source\Game\Controllers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1404,9 +1404,6 @@
     <Filter Include="Source\Game\DarkGame\DarkActors">
       <UniqueIdentifier>{a187149e-db38-42f7-bb1f-64ba336047dd}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Game\DarkGame\DarkActors\DarkEnemy">
-      <UniqueIdentifier>{6b4d91fc-9547-40a7-943b-0d0510dc81c6}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\Game\Scenes">
       <UniqueIdentifier>{7cd2c2c4-356d-4b61-94e7-1b0c1012598e}</UniqueIdentifier>
     </Filter>
@@ -1458,11 +1455,17 @@
     <Filter Include="Shader">
       <UniqueIdentifier>{8f40bc09-f170-4103-abd0-fd67cf91bb37}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Game\DarkGame\BehaviorTree">
-      <UniqueIdentifier>{813377e3-7256-45fd-995e-929b20cbf819}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\Game\Actors\UI">
       <UniqueIdentifier>{efe9d789-fb3a-4d42-b922-e4b4f1e3fb82}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Game\Actors\Enemy\Boss\BehaviorTree">
+      <UniqueIdentifier>{813377e3-7256-45fd-995e-929b20cbf819}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Game\Actors\Bgm">
+      <UniqueIdentifier>{f503660e-4a2c-4dc3-91e7-ef88bf184b97}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Game\Controllers">
+      <UniqueIdentifier>{47cf8f3e-7ecb-42d4-bcd8-5f4ce966f160}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

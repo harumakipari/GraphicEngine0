@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "GameBossDeathController.h"
+
 #include "Engine/Debug/SceneEditor.h"
 #include "Engine/Scene/SceneSetting.h"
 #include "Engine/Camera/CameraManager.h"
@@ -8,9 +9,9 @@
 #include "Game/Actors/Camera/Camera.h"
 #include "Game/Actors/Player/Player.h"
 #include "Game/Actors/UI/GameBossDeathUIActor.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
-#include "Game/DarkGame/GameBgmDirector.h"
+#include "Game/Actors/Enemy/Boss/GruxEnemy.h"
 #include "UI/Widgets/Widget.h"
+#include "GameBgmDirector.h"
 
 namespace
 {

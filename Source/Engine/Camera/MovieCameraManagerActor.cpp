@@ -9,7 +9,7 @@
 #include "Game/DarkGame/DarkActors/DarkStageCandelabraActor.h"
 #include "Game/DarkGame/DarkActors/DarkStageChandelierActor.h"
 #include "Game/DarkGame/DarkActors/DoorActor.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
+#include "Game/Actors/Enemy/Boss/GruxEnemy.h"
 #include "Game/Scenes/GameScene.h"
 
 void MovieCameraManagerActor::Initialize(const Transform& transform)

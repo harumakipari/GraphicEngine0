@@ -1,11 +1,11 @@
 #include "pch.h"
 #include "GamePhase2TransitionController.h"
-#include "GameBgmDirector.h"
 #include "Engine/Utility/Time.h"
 #include "Engine/Debug/SceneEditor.h"
+#include "Game/Actors/Bgm/GameBgmDirector.h"
 #include "Game/Actors/Camera/Camera.h"
 #include "Game/Actors/Player/Player.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
+#include "Game/Actors/Enemy/Boss/GruxEnemy.h"
 
 
 void GamePhase2TransitionController::LoadShots()

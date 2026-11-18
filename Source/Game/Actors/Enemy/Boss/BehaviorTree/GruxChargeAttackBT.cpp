@@ -1,7 +1,7 @@
 ﻿#include "pch.h"
 #include "GruxChargeAttackBT.h"
 #include "NodeBase.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
+#include "Game/Actors/Enemy/Boss/GruxEnemy.h"
 #include "Game/Actors/Player/Player.h"
 #include "Engine/Scene/Scene.h"
 #include "Core/ActorManager.h"

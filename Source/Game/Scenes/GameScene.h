@@ -7,9 +7,8 @@
 #include <array>
 
 #include "Engine/Scene/SceneBase.h"
-#include "Game/Actors/BgmActor.h"
-#include "Game/DarkGame/GameBgmDirector.h"
-#include "Game/DarkGame/GameTutorialController.h"
+#include "Game/Actors/Bgm/BgmActor.h"
+#include "Game/Actors/Bgm/GameBgmDirector.h"
 #include "Game/Actors/Camera/DarkGameCamera.h"
 #include "Game/Actors/Player/Player.h"
 #include "Game/Actors/UI/GameBossDeathUIActor.h"
@@ -19,10 +18,11 @@
 #include "Game/Actors/UI/GameLockOnTargetUIActor.h"
 #include "Game/Actors/UI/GameTutorialUIActor.h"
 #include "Game/Actors/UI/GameVictoryUIActor.h"
-#include "Game/DarkGame/GameBossDeathController.h"
-#include "Game/DarkGame/GamePhase2TransitionController.h"
-#include "Game/DarkGame/GamePlayerDeathController.h"
-#include "Game/DarkGame/GameVictoryController.h"
+#include "Game/Controllers/GameBossDeathController.h"
+#include "Game/Controllers/GamePhase2TransitionController.h"
+#include "Game/Controllers/GamePlayerDeathController.h"
+#include "Game/Controllers/GameTutorialController.h"
+#include "Game/Controllers/GameVictoryController.h"
 #include "Game/DarkGame/DarkActors/DarkClothActor.h"
 #include "Game/DarkGame/DarkActors/DarkStageAsset.h"
 

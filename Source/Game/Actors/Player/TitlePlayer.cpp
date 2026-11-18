@@ -1,27 +1,12 @@
 #include "pch.h"
 #include "TitlePlayer.h"
 
-#ifdef USE_IMGUI
-#define IMGUI_ENABLE_DOCKING
-#include <imgui.h>
-#endif
-
-#include "Physics/Physics.h"
 #include "Core/ActorManager.h"
-
 #include "Components/Render/PointLightComponent.h"
-
-#include "PlayerStateDerived.h"
-#include "Components/Audio/AudioSourceComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneBase.h"
 #include "Engine/Utility/Time.h"
-#include "Game/Actors/Camera/Camera.h"
-#include "Game/Actors/Enemy/Enemy.h"
-#include "Game/DarkGame/Interactable.h"
-#include "Game/DarkGame/DarkActors/InteractableActor.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
-#include "Physics/CollisionFunction.h"
+
 
 
 void TitlePlayer::Initialize(const Transform& transform)

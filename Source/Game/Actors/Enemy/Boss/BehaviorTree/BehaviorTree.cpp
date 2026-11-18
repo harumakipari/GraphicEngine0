@@ -4,7 +4,7 @@
 #include "ActionBase.h"
 #include "NodeBase.h"
 #include "JudgementBase.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
+#include "Game/Actors/Enemy/Boss/GruxEnemy.h"
 #include "BehaviorData.h"
 
 // デストラクタ

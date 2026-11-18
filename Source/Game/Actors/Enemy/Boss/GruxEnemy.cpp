@@ -17,16 +17,16 @@
 #include "Physics/CollisionFunction.h"
 #include "Physics/Physics.h"
 
-#include "Game/DarkGame/BehaviorTree/BehaviorData.h"
-#include "Game/DarkGame/BehaviorTree/BehaviorTree.h"
-#include "Game/DarkGame/BehaviorTree/ActionBase.h"
-#include "Game/DarkGame/BehaviorTree/GruxFastComboBT.h"
-#include "Game/DarkGame/BehaviorTree/GruxJumpAttackBT.h"
-#include "Game/DarkGame/BehaviorTree/GruxDashAttackBT.h"
-#include "Game/DarkGame/BehaviorTree/GruxChargeAttackBT.h"
-#include "Game/DarkGame/BehaviorTree/GruxRoarBT.h"
-#include "Game/DarkGame/BehaviorTree/AttackRecoveryBT.h"
-#include "Game/DarkGame/BehaviorTree/NodeBase.h"
+#include "Game/Actors/Enemy/Boss/BehaviorTree/BehaviorData.h"
+#include "Game/Actors/Enemy/Boss/BehaviorTree/BehaviorTree.h"
+#include "Game/Actors/Enemy/Boss/BehaviorTree/ActionBase.h"
+#include "Game/Actors/Enemy/Boss/BehaviorTree/GruxFastComboBT.h"
+#include "Game/Actors/Enemy/Boss/BehaviorTree/GruxJumpAttackBT.h"
+#include "Game/Actors/Enemy/Boss/BehaviorTree/GruxDashAttackBT.h"
+#include "Game/Actors/Enemy/Boss/BehaviorTree/GruxChargeAttackBT.h"
+#include "Game/Actors/Enemy/Boss/BehaviorTree/GruxRoarBT.h"
+#include "Game/Actors/Enemy/Boss/BehaviorTree/AttackRecoveryBT.h"
+#include "Game/Actors/Enemy/Boss/BehaviorTree/NodeBase.h"
 
 void GruxEnemy::Initialize(const Transform& transform)
 {

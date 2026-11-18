@@ -1,9 +1,6 @@
 #include "pch.h"
 #include "SceneBase.h"
 #include <profiler.h>
-#ifdef USE_IMGUI
-#include "ImGuizmo.h"
-#endif
 #include <DDSTextureLoader.h>
 
 #include "Engine/Debug/DebugRender.h"
@@ -17,7 +14,7 @@
 #include "Engine/Utility/Time.h"
 #include "Game/Actors/Camera/Camera.h"
 #include "Game/Actors/Player/Player.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
+#include "Game/Actors/Enemy/Boss/GruxEnemy.h"
 #include "Graphics/PostProcess/BloomEffect.h"
 #include "Graphics/PostProcess/DepthOfFieldEffect.h"
 #include "Graphics/PostProcess/RadialBlurEffect.h"

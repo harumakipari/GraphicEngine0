@@ -8,9 +8,10 @@
 #include "Engine/Effects/EffectManager.h"
 #include "Game/Actors/Camera/DarkGameCamera.h"
 #include "Game/Actors/Player/Player.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/SkeletonBodyPartActor.h"
 #include "Physics/CollisionFunction.h"
 #include <tracy/Tracy.hpp>
+
+#include "SkeletonBodyPartActor.h"
 
 class SkeletonHpBarUI
 {

@@ -2,8 +2,7 @@
 #include "Camera.h"
 
 #include "Components/Controller/ControllerComponent.h"
-#include "Engine/Scene/SceneBase.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
+#include "Game/Actors/Enemy/Boss/GruxEnemy.h"
 #include "Physics/CollisionFunction.h"
 
 void Camera::Initialize(const Transform& transform)
