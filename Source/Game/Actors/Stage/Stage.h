@@ -1,6 +1,6 @@
 #pragma once
 #include <array>
-#include "DarkStageAsset.h"
+#include "StageAsset.h"
 #include "Core/Actor.h"
 #include "Components/Render/MeshComponent.h"
 #include "Components/CollisionShape/ShapeComponent.h"

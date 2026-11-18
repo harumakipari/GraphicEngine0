@@ -1,6 +1,6 @@
 #pragma once
 #include "Core/Actor.h"
-#include "Game/Actors/Stage/ClothSimulate.h"
+#include "ClothSimulate.h"
 
 class DarkClothActor :public Actor
 {

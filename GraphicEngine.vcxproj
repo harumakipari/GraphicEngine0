@@ -303,6 +303,9 @@
     <ClCompile Include="Source\Game\Actors\Bgm\GameBgmDirector.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Effects\ModelDebrisEmitterActor.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
     <ClCompile Include="Source\Game\Actors\Enemy\Boss\BehaviorTree\AttackRecoveryBT.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
@@ -339,6 +342,36 @@
     <ClCompile Include="Source\Game\Actors\Enemy\SkeletonWarriorEnemy.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Stage\Stage.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Stage\StagePointLightActor.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Stage\TitleStage.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Stage\Props\StageBrazierActor.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Stage\Props\StageCandelabraActor.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Stage\Props\StageChandelierActor.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Stage\Props\StageGroundBrazierActor.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Stage\Props\DoorActor.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Stage\Props\InteractableActor.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Stage\Props\LanternActor.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
     <ClCompile Include="Source\Game\Actors\UI\GameMovieSkipUIActor.cpp" />
     <ClCompile Include="Source\Game\Actors\UI\GameVictoryUIActor.cpp" />
     <ClCompile Include="Source\Game\Actors\UI\GameDefeatUIActor.cpp" />
@@ -349,6 +382,12 @@
     <ClCompile Include="Source\Game\Actors\Camera\Camera.cpp" />
     <ClCompile Include="Source\Game\Actors\Camera\DarkGameCamera.cpp" />
     <ClCompile Include="Source\Game\Actors\Player\TitlePlayer.cpp" />
+    <ClCompile Include="Source\Game\Cloth\ClothSimulate.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Cloth\ClothActor.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
     <ClCompile Include="Source\Game\Controllers\GameBossDeathController.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
@@ -364,21 +403,8 @@
     <ClCompile Include="Source\Game\Controllers\GameVictoryController.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkClothActor.cpp" />
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStageBrazierActor.cpp" />
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStageCandelabraActor.cpp" />
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStageChandelierActor.cpp" />
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStageGroundBrazierActor.cpp" />
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStagePointLightActor.cpp" />
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkTitleStage.cpp" />
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DoorActor.cpp" />
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStage.cpp" />
     <ClCompile Include="Source\Game\Actors\Player\Player.cpp" />
     <ClCompile Include="Source\Game\Actors\Player\PlayerStateDerived.cpp" />
-    <ClCompile Include="Source\Game\Actors\Stage\ClothSimulate.cpp" />
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\ModelDebrisEmitterActor.cpp" />
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\InteractableActor.cpp" />
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\LanternActor.cpp" />
     <ClCompile Include="Source\Game\Scenes\LoadingScene.cpp" />
     <ClCompile Include="Source\Game\Scenes\GameScene.cpp" />
     <ClCompile Include="Source\Game\Scenes\TitleScene.cpp" />
@@ -501,6 +527,9 @@
     </ClInclude>
     <ClInclude Include="Source\Game\Actors\Camera\Camera.h" />
     <ClInclude Include="Source\Game\Actors\Camera\DarkGameCamera.h" />
+    <ClInclude Include="Source\Game\Actors\Effects\ModelDebrisEmitterActor.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
     <ClInclude Include="Source\Game\Actors\Enemy\Boss\BehaviorTree\ActionBase.h">
       <DeploymentContent>false</DeploymentContent>
     </ClInclude>
@@ -550,13 +579,54 @@
     <ClInclude Include="Source\Game\Actors\Player\TitlePlayer.h">
       <DeploymentContent>false</DeploymentContent>
     </ClInclude>
-    <ClInclude Include="Source\Game\Actors\Stage\ClothSimulate.h" />
+    <ClInclude Include="Source\Game\Actors\Stage\Stage.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\StageAsset.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\StagePointLightActor.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\TitleStage.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\Props\StageBrazierActor.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\Props\StageCandelabraActor.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\Props\StageChandelierActor.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\Props\StageGroundBrazierActor.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\Props\DoorActor.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\Props\Interactable.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\Props\InteractableActor.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\Props\LanternActor.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
     <ClInclude Include="Source\Game\Actors\UI\GameDefeatUIActor.h" />
     <ClInclude Include="Source\Game\Actors\UI\GameMovieSkipUIActor.h" />
     <ClInclude Include="Source\Game\Actors\UI\GameBossDeathUIActor.h" />
     <ClInclude Include="Source\Game\Actors\UI\GameLockOnTargetUIActor.h" />
     <ClInclude Include="Source\Game\Actors\UI\GameTutorialUIActor.h" />
     <ClInclude Include="Source\Game\Actors\UI\GameTimerUIActor.h" />
+    <ClInclude Include="Source\Game\Cloth\ClothSimulate.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Cloth\ClothActor.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
     <ClInclude Include="Source\Game\Controllers\GameBossDeathController.h">
       <DeploymentContent>false</DeploymentContent>
     </ClInclude>
@@ -572,20 +642,6 @@
     <ClInclude Include="Source\Game\Controllers\GameVictoryController.h">
       <DeploymentContent>false</DeploymentContent>
     </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkClothActor.h" />
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageAsset.h" />
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageBrazierActor.h" />
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageCandelabraActor.h" />
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageChandelierActor.h" />
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageGroundBrazierActor.h" />
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkTitleStage.h" />
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DoorActor.h" />
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStage.h" />
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\ModelDebrisEmitterActor.h" />
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\InteractableActor.h" />
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStagePointLightActor.h" />
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\LanternActor.h" />
-    <ClInclude Include="Source\Game\DarkGame\Interactable.h" />
     <ClInclude Include="Source\Game\Scenes\LoadingScene.h" />
     <ClInclude Include="Source\Game\Scenes\GameScene.h" />
     <ClInclude Include="Source\Game\Scenes\TitleScene.h" />

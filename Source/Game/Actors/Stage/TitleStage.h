@@ -1,7 +1,6 @@
 #pragma once
-#include "DarkStageAsset.h"
+#include "StageAsset.h"
 #include "Core/Actor.h"
-#include "Components/Render/PointLightComponent.h"
 
 
 class DarkTitleStage :public Actor

@@ -23,8 +23,8 @@
 #include "Game/Controllers/GamePlayerDeathController.h"
 #include "Game/Controllers/GameTutorialController.h"
 #include "Game/Controllers/GameVictoryController.h"
-#include "Game/DarkGame/DarkActors/DarkClothActor.h"
-#include "Game/DarkGame/DarkActors/DarkStageAsset.h"
+#include "Game/Cloth/ClothActor.h"
+#include "Game/Actors/Stage/StageAsset.h"
 
 #include "UI/Widgets/Widget.h"
 

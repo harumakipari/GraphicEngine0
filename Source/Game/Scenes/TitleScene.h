@@ -9,7 +9,7 @@
 #include "Game/Actors/Bgm/BgmActor.h"
 #include "Game/Actors/Camera/Camera.h"
 #include "Game/Actors/Player/TitlePlayer.h"
-#include "Game/DarkGame/DarkActors/DarkStageAsset.h"
+#include "Game/Actors/Stage/StageAsset.h"
 #include "UI/Widgets/Widget.h"
 
 

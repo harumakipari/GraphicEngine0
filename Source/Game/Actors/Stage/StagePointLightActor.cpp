@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "DarkStagePointLightActor.h"
+#include "StagePointLightActor.h"
 
 void DarkStagePointLightActor::Initialize(const Transform& transform)
 {

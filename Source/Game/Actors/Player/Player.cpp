@@ -17,8 +17,8 @@
 #include "Engine/Utility/Time.h"
 #include "Game/Actors/Enemy/Enemy.h"
 #include "Game/Scenes/GameScene.h"
-#include "Game/DarkGame/Interactable.h"
-#include "Game/DarkGame/DarkActors/InteractableActor.h"
+#include "Game/Actors/Stage/Props/Interactable.h"
+#include "Game/Actors/Stage/Props/InteractableActor.h"
 #include "Game/Actors/Enemy/Boss/GruxEnemy.h"
 #include "Physics/CollisionFunction.h"
 

@@ -12,8 +12,8 @@
 #include "Game/Actors/Camera/DarkGameCamera.h"
 #include "Game/Actors/Player/Player.h"
 #include "Game/Scenes/GameScene.h"
-#include "Game/DarkGame/DarkActors/DarkStage.h"
-#include "Game/DarkGame/DarkActors/ModelDebrisEmitterActor.h"
+#include "Game/Actors/Stage/Stage.h"
+#include "Game/Actors/Effects/ModelDebrisEmitterActor.h"
 #include "Physics/CollisionFunction.h"
 #include "Physics/Physics.h"
 

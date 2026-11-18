@@ -1,7 +1,8 @@
 #pragma once
-#include "DarkStageAsset.h"
-#include "Components/Easing/EasingComponent.h"
 #include "Core/Actor.h"
+
+#include "Game/Actors/Stage/StageAsset.h"
+#include "Components/Easing/EasingComponent.h"
 #include "Components/Render/PointLightComponent.h"
 
 class DarkStageCandelabraActor :public Actor

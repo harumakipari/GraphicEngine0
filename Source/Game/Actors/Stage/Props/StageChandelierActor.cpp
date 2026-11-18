@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "DarkStageChandelierActor.h"
+#include "StageChandelierActor.h"
 
 #include "Components/Effect/ParticleComponent.h"
 #include "Engine/Scene/SceneBase.h"

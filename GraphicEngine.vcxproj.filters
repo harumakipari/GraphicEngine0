@@ -175,9 +175,6 @@
     <ClCompile Include="Source\Game\Actors\Camera\DarkGameCamera.cpp">
       <Filter>Source\Game\Actors\Camera</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\Actors\Stage\ClothSimulate.cpp">
-      <Filter>Source\Game\Actors\Stage</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Game\Actors\Player\TitlePlayer.cpp">
       <Filter>Source\Game\Actors\Player</Filter>
     </ClCompile>
@@ -189,42 +186,6 @@
     </ClCompile>
     <ClCompile Include="Source\Game\Actors\Base\Character.cpp">
       <Filter>Source\Game\Actors\Base</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkClothActor.cpp">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStageBrazierActor.cpp">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStageCandelabraActor.cpp">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStageChandelierActor.cpp">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStageGroundBrazierActor.cpp">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStagePointLightActor.cpp">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkTitleStage.cpp">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DoorActor.cpp">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStage.cpp">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\ModelDebrisEmitterActor.cpp">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\InteractableActor.cpp">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\LanternActor.cpp">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\Scenes\LoadingScene.cpp">
       <Filter>Source\Game\Scenes</Filter>
@@ -414,6 +375,45 @@
     </ClCompile>
     <ClCompile Include="Source\Game\Controllers\GameVictoryController.cpp">
       <Filter>Source\Game\Controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Stage\Stage.cpp">
+      <Filter>Source\Game\Actors\Stage</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Stage\TitleStage.cpp">
+      <Filter>Source\Game\Actors\Stage</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Stage\StagePointLightActor.cpp">
+      <Filter>Source\Game\Actors\Stage</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Stage\Props\StageBrazierActor.cpp">
+      <Filter>Source\Game\Actors\Stage\Props</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Stage\Props\StageCandelabraActor.cpp">
+      <Filter>Source\Game\Actors\Stage\Props</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Stage\Props\StageChandelierActor.cpp">
+      <Filter>Source\Game\Actors\Stage\Props</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Stage\Props\StageGroundBrazierActor.cpp">
+      <Filter>Source\Game\Actors\Stage\Props</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Stage\Props\DoorActor.cpp">
+      <Filter>Source\Game\Actors\Stage\Props</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Stage\Props\InteractableActor.cpp">
+      <Filter>Source\Game\Actors\Stage\Props</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Stage\Props\LanternActor.cpp">
+      <Filter>Source\Game\Actors\Stage\Props</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Effects\ModelDebrisEmitterActor.cpp">
+      <Filter>Source\Game\Actors\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Cloth\ClothSimulate.cpp">
+      <Filter>Source\Game\Cloth</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Cloth\ClothActor.cpp">
+      <Filter>Source\Game\Cloth</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -621,9 +621,6 @@
     <ClInclude Include="Source\Game\Actors\Enemy\Boss\BossAITypes.h">
       <Filter>Source\Game\Actors\Enemy\Boss</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Game\Actors\Stage\ClothSimulate.h">
-      <Filter>Source\Game\Actors\Stage</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Game\Actors\Player\Player.h">
       <Filter>Source\Game\Actors\Player</Filter>
     </ClInclude>
@@ -635,48 +632,6 @@
     </ClInclude>
     <ClInclude Include="Source\Game\Actors\Base\Character.h">
       <Filter>Source\Game\Actors\Base</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\Interactable.h">
-      <Filter>Source\Game\DarkGame</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkClothActor.h">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageAsset.h">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageBrazierActor.h">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageCandelabraActor.h">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageChandelierActor.h">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageGroundBrazierActor.h">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkTitleStage.h">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DoorActor.h">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStage.h">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\ModelDebrisEmitterActor.h">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\InteractableActor.h">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStagePointLightActor.h">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\LanternActor.h">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Scenes\LoadingScene.h">
       <Filter>Source\Game\Scenes</Filter>
@@ -944,6 +899,51 @@
     </ClInclude>
     <ClInclude Include="Source\Game\Controllers\GameVictoryController.h">
       <Filter>Source\Game\Controllers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\Stage.h">
+      <Filter>Source\Game\Actors\Stage</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\StageAsset.h">
+      <Filter>Source\Game\Actors\Stage</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\TitleStage.h">
+      <Filter>Source\Game\Actors\Stage</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\StagePointLightActor.h">
+      <Filter>Source\Game\Actors\Stage</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\Props\StageBrazierActor.h">
+      <Filter>Source\Game\Actors\Stage\Props</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\Props\StageCandelabraActor.h">
+      <Filter>Source\Game\Actors\Stage\Props</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\Props\StageChandelierActor.h">
+      <Filter>Source\Game\Actors\Stage\Props</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\Props\StageGroundBrazierActor.h">
+      <Filter>Source\Game\Actors\Stage\Props</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\Props\DoorActor.h">
+      <Filter>Source\Game\Actors\Stage\Props</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\Props\InteractableActor.h">
+      <Filter>Source\Game\Actors\Stage\Props</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\Props\LanternActor.h">
+      <Filter>Source\Game\Actors\Stage\Props</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Stage\Props\Interactable.h">
+      <Filter>Source\Game\Actors\Stage\Props</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Effects\ModelDebrisEmitterActor.h">
+      <Filter>Source\Game\Actors\Effects</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Cloth\ClothSimulate.h">
+      <Filter>Source\Game\Cloth</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Cloth\ClothActor.h">
+      <Filter>Source\Game\Cloth</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1398,12 +1398,6 @@
     <Filter Include="Source\Game\Actors\Base">
       <UniqueIdentifier>{a7f2acf9-c11c-4918-a77d-7a4be64c15f2}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Game\DarkGame">
-      <UniqueIdentifier>{158d653c-b6f8-4b66-97ac-df4ec14444fa}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Game\DarkGame\DarkActors">
-      <UniqueIdentifier>{a187149e-db38-42f7-bb1f-64ba336047dd}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\Game\Scenes">
       <UniqueIdentifier>{7cd2c2c4-356d-4b61-94e7-1b0c1012598e}</UniqueIdentifier>
     </Filter>
@@ -1466,6 +1460,15 @@
     </Filter>
     <Filter Include="Source\Game\Controllers">
       <UniqueIdentifier>{47cf8f3e-7ecb-42d4-bcd8-5f4ce966f160}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Game\Cloth">
+      <UniqueIdentifier>{80661706-8a7c-4801-8bed-42400b2f56d2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Game\Actors\Stage\Props">
+      <UniqueIdentifier>{de73f686-4d74-46ea-a8cc-07aab3a2f08c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Game\Actors\Effects">
+      <UniqueIdentifier>{a187149e-db38-42f7-bb1f-64ba336047dd}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

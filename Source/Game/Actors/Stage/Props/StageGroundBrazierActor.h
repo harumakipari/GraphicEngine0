@@ -1,5 +1,5 @@
 #pragma once
-#include "DarkStageAsset.h"
+#include "Game/Actors/Stage/StageAsset.h"
 #include "Core/Actor.h"
 
 class DarkStageGroundBrazierActor :public Actor

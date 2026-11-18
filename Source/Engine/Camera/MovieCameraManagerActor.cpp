@@ -6,9 +6,9 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Camera/CameraManager.h"
 #include "Game/Actors/Player/Player.h"
-#include "Game/DarkGame/DarkActors/DarkStageCandelabraActor.h"
-#include "Game/DarkGame/DarkActors/DarkStageChandelierActor.h"
-#include "Game/DarkGame/DarkActors/DoorActor.h"
+#include "Game/Actors/Stage/Props/StageCandelabraActor.h"
+#include "Game/Actors/Stage/Props/StageChandelierActor.h"
+#include "Game/Actors/Stage/Props/DoorActor.h"
 #include "Game/Actors/Enemy/Boss/GruxEnemy.h"
 #include "Game/Scenes/GameScene.h"
 

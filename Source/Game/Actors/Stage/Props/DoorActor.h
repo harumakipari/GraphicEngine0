@@ -1,5 +1,5 @@
 #pragma once
-#include "Game/DarkGame/DarkActors/InteractableActor.h"
+#include "InteractableActor.h"
 
 class DoorLargeActor : public InteractableActor
 {

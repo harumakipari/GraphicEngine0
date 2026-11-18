@@ -1,12 +1,11 @@
 #include "pch.h"
-#include "DarkTitleStage.h"
+#include "TitleStage.h"
 
-#include "DarkStageBrazierActor.h"
-#include "DarkStageCandelabraActor.h"
-#include "DarkStageChandelierActor.h"
-#include "DarkStageGroundBrazierActor.h"
-#include "DarkStagePointLightActor.h"
-#include "DoorActor.h"
+#include "Game/Actors/Stage/Props/StageBrazierActor.h"
+#include "Game/Actors/Stage/Props/StageCandelabraActor.h"
+#include "Game/Actors/Stage/Props/StageChandelierActor.h"
+#include "Game/Actors/Stage/Props/StageGroundBrazierActor.h"
+#include "Game/Actors/Stage/Props/DoorActor.h"
 #include "Components/Effect/ParticleComponent.h"
 #include "Engine/Scene/Scene.h"
 

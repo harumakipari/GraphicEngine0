@@ -14,10 +14,10 @@
 
 
 #include "Physics/Physics.h"
-#include "Game/DarkGame/DarkActors/DarkStage.h"
-#include "Game/DarkGame/DarkActors/DarkTitleStage.h"
-#include "Game/DarkGame/DarkActors/DoorActor.h"
-#include "Game/DarkGame/DarkActors/LanternActor.h"
+#include "Game/Actors/Stage/Stage.h"
+#include "Game/Actors/Stage/TitleStage.h"
+#include "Game/Actors/Stage/Props/DoorActor.h"
+#include "Game/Actors/Stage/Props/LanternActor.h"
 #include "Game/Actors/Enemy/Boss/GruxEnemy.h"
 
 #include "Physics/CollisionSystem.h"

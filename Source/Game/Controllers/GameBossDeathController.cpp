@@ -6,12 +6,13 @@
 #include "Engine/Camera/CameraManager.h"
 #include "Engine/Audio/Audio.h"
 #include "Engine/Input/InputSystem.h"
+#include "Game/Actors/Bgm/GameBgmDirector.h"
 #include "Game/Actors/Camera/Camera.h"
 #include "Game/Actors/Player/Player.h"
 #include "Game/Actors/UI/GameBossDeathUIActor.h"
 #include "Game/Actors/Enemy/Boss/GruxEnemy.h"
 #include "UI/Widgets/Widget.h"
-#include "GameBgmDirector.h"
+
 
 namespace
 {

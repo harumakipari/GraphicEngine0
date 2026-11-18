@@ -1,6 +1,6 @@
 #pragma once
 #include "Core/Actor.h"
-#include "Game/DarkGame/Interactable.h"
+#include "Interactable.h"
 #include "UI/Widgets/Widget.h"
 
 class InteractableActor :public Actor, public IInteractable

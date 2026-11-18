@@ -1,10 +1,9 @@
 #include "pch.h"
-#include "DarkStageGroundBrazierActor.h"
+#include "StageGroundBrazierActor.h"
 
 #include "Components/Effect/ParticleComponent.h"
 #include "Components/Render/PointLightComponent.h"
 #include "Engine/Scene/SceneBase.h"
-
 
 void DarkStageGroundBrazierActor::SetModel(const std::shared_ptr<StageAsset>& stageAsset)
 {

@@ -1,6 +1,5 @@
 #include "pch.h"
-#include "DarkClothActor.h"
-
+#include "ClothActor.h"
 #include "Components/Render/PointLightComponent.h"
 
 void DarkClothActor::Initialize(const Transform& transform)

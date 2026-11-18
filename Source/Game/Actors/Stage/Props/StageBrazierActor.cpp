@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "DarkStageBrazierActor.h"
+#include "StageBrazierActor.h"
 
 #include "Components/Effect/ParticleComponent.h"
 #include "Components/Render/PointLightComponent.h"
