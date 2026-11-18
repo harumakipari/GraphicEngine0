@@ -178,9 +178,9 @@ private:
     float windBase = 0.0f;
     DirectX::XMFLOAT3 windEmitPosition = {};
     bool enableDriveForce = true;
-    float driveForceAmplitude = 1.2f;
+    float driveForceAmplitude = 1.0f;
     float driveForceFrequency = 5.0f;
-    float driveForcePhaseGradient = 5.0f;
+    float driveForcePhaseGradient = 4.5f;
     float gravityScale = 0.0f;
     float bottomWindExponent = 1.0f;
 

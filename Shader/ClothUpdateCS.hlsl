@@ -43,7 +43,7 @@ RWStructuredBuffer<ClothVertex> outVertices : register(u0);
 
 #define SPRING_STIFFNESS 40.0   
 #define SPRING_DAMPING   25.0     
-#define GLOBAL_DAMPING   0.05    
+#define GLOBAL_DAMPING   0.015
 
 cbuffer CLOTH_TIME_CBUFFER : register(b11)
 {
