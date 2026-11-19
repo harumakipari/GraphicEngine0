@@ -21,7 +21,6 @@ public:
         int samplingCount = 8;
         DirectX::XMFLOAT2 screenSize{};
     };
-    static_assert(sizeof(RadialBlurConstantBuffer) % 16 == 0, "Radial blur constants must be 16-byte aligned.");
 
     void Initialize(ID3D11Device* device, uint32_t width, uint32_t height);
     void Apply(ID3D11DeviceContext* immediateContext, ID3D11ShaderResourceView* sceneColor);

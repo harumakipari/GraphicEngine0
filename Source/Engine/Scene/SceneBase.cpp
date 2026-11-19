@@ -59,8 +59,6 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
 
     fullscreenQuad = std::make_unique<FullScreenQuad>(device);
 
-    multipleRenderTargets = std::make_unique<decltype(multipleRenderTargets)::element_type>(device, static_cast<uint32_t>(width), height, 3);
-
     frameBuffer = std::make_unique<FrameBuffer>(device, static_cast<uint32_t>(width), height, false);
     deferredLightingDebugBuffer = std::make_unique<FrameBuffer>(device, static_cast<uint32_t>(width), height, false);
     finalBuffer = std::make_unique<FrameBuffer>(device, static_cast<uint32_t>(width), height, false);
@@ -269,9 +267,6 @@ bool SceneBase::OnSizeChanged(ID3D11Device* device, const UINT64 width, UINT hei
 {
     framebufferDimensions.cx = static_cast<LONG>(width);
     framebufferDimensions.cy = static_cast<LONG>(height);
-
-    multipleRenderTargets = std::make_unique<decltype(multipleRenderTargets)::element_type>(device, framebufferDimensions.cx, framebufferDimensions.cy, 3);
-
     gBufferRenderTarget = std::make_unique<decltype(gBufferRenderTarget)::element_type>(device, static_cast<uint32_t>(width), height);
 
     // シーンエフェクト

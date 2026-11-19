@@ -5,7 +5,6 @@
 #include "FrameBuffer.h"
 #include "SceneEffectBase.h"
 #include "FullScreenQuad.h"
-#include "Engine/Scene/SceneSetting.h"
 #include "Graphics/Core/ConstantBuffer.h"
 
 class MotionBlurEffect :public SceneEffectBase
@@ -13,10 +12,10 @@ class MotionBlurEffect :public SceneEffectBase
 public:
     struct MotionBlurConstantBuffer
     {
-        int motion_blur_iteration = 5;
-        float motion_blur_jitter = 1.0f;
-        float motion_blur_exposure_time = 1000;
-        float motion_blur_fps_rate = 1.0f / 60.0f;
+        int motionBlurIteration = 5;
+        float motionBlurJitter = 1.0f;
+        float motionBlurExposureTime = 1000;
+        float motionBlurFpsRate = 1.0f / 60.0f;
     };
 
 public:

@@ -23,7 +23,6 @@ public:
 
     void Initialize();
 
-    // Resets both the input history and the derived CPU geometry cache.
     void Clear();
 
     void UpdateTrail(float deltaTime);
@@ -50,7 +49,6 @@ public:
 private:
     struct TrailConstants
     {
-        // Alpha is the blend amount so zero preserves the existing trail colors.
         DirectX::XMFLOAT4 rushColor{ 1.0f, 1.0f, 1.0f, 0.0f };
         float emissiveStrength = 1.0f;
         DirectX::XMFLOAT3 padding{};

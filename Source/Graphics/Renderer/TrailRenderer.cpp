@@ -96,22 +96,6 @@ void Trail::UpdateTrail(float deltaTime)
 
     const float maxLife = fadeLifetime;
 
-#if 0
-    for (size_t i = 0; i < trailPoints.size(); i++)
-    {
-        auto& point = trailPoints[i];
-
-        float alpha = point.life / maxLife;
-        alpha *= alpha;
-
-        float u = static_cast<float>(i) / (trailPoints.size() - 1);
-
-        // Œ•æ
-        vertices.push_back({ point.tip,alpha,{u, 0.0f} });
-        // Œ•‚ÌªŒ³
-        vertices.push_back({ point.root,alpha,{u, 1.0f} });
-    }
-#else
     if (trailPoints.size() < 4)
         return;
 
@@ -172,7 +156,6 @@ void Trail::UpdateTrail(float deltaTime)
                 });
         }
     }
-#endif // 0
 
 }
 

@@ -72,7 +72,7 @@ void MotionBlurEffect::Apply(ID3D11DeviceContext* immediateContext, ID3D11Shader
         tile_max_shader_resource_view.Get(),
     };
 
-    if (motionBlurCBuffer->data.motion_blur_iteration <= 0)
+    if (motionBlurCBuffer->data.motionBlurIteration <= 0)
         return;
 
     //	ビューポートを退避
@@ -135,7 +135,7 @@ void MotionBlurEffect::Apply(ID3D11DeviceContext* immediateContext, ID3D11Shader
 // 速度バッファを再構築する
 void MotionBlurEffect::ReconstractVelocityBuffer(float deltaTime, ID3D11DeviceContext* immediateContext)
 {
-    if (motionBlurCBuffer->data.motion_blur_iteration <= 0)
+    if (motionBlurCBuffer->data.motionBlurIteration <= 0)
         return;
 
     //	ビューポートを退避
@@ -152,50 +152,6 @@ void MotionBlurEffect::ReconstractVelocityBuffer(float deltaTime, ID3D11DeviceCo
     viewport.MaxDepth = 1.0f;
     immediateContext->RSSetViewports(1, &viewport);
 
-#if 0
-    //	速度バッファ内の速度をタイル化する
-    {
-        //	出力先をタイルバッファに変更
-        {
-            FLOAT clear_color[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-            immediateContext->ClearRenderTargetView(tile_max_render_target_view.Get(), clear_color);
-            immediateContext->OMSetRenderTargets(1, tile_max_render_target_view.GetAddressOf(), nullptr);
-        }
-        {
-            RenderState::BindBlendState(immediateContext, BLEND_STATE::NONE);
-            RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_OFF_ZW_OFF);
-            RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
-
-            immediateContext->VSSetShader(sprite_vertex_shader.Get(), nullptr, 0);
-            immediateContext->IASetInputLayout(sprite_input_layout.Get());
-            immediateContext->PSSetShader(reconstract_velocity_buffer_ps[0].Get(), nullptr, 0);
-            ->render(get_renderdata()->immediate_context.Get(), 0, 0, viewport.Width, viewport.Height);
-        }
-    }
-
-    //	タイルバッファ内に記録した速度から、周辺を調べて最大速度を記録
-    {
-        //	出力先を近傍バッファに変更
-        {
-            FLOAT clear_color[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-            immediateContext->ClearRenderTargetView(neighbor_max_render_target_view.Get(), clear_color);
-            immediateContext->OMSetRenderTargets(1, neighbor_max_render_target_view.GetAddressOf(), nullptr);
-        }
-        {
-            static constexpr int TileMaxVelocitySRVIndex = 15;
-            immediateContext->PSSetShaderResources(TileMaxVelocitySRVIndex, 1, tile_max_shader_resource_view.GetAddressOf());
-
-            RenderState::BindBlendState(immediateContext, BLEND_STATE::NONE);
-            RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_OFF_ZW_OFF);
-            RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
-            immediateContext->VSSetShader(sprite_vertex_shader.Get(), nullptr, 0);
-            immediateContext->IASetInputLayout(sprite_input_layout.Get());
-            immediateContext->PSSetShader(reconstract_velocity_buffer_ps[1].Get(), nullptr, 0);
-            ->render(get_renderdata()->immediate_context.Get(), 0, 0, viewport.Width, viewport.Height);
-        }
-    }
-#endif // 0
-
     //	退避した物を再設定
     immediateContext->RSSetViewports(reserve_num_viewports, reserve_viewports);
 
@@ -204,14 +160,12 @@ void MotionBlurEffect::ReconstractVelocityBuffer(float deltaTime, ID3D11DeviceCo
 void MotionBlurEffect::DrawDebugUI()
 {
 #ifdef USE_IMGUI
-    ImGui::SliderInt("iteration", &motionBlurCBuffer->data.motion_blur_iteration, 0, 32);
-    ImGui::SliderFloat("jitter", &motionBlurCBuffer->data.motion_blur_jitter, 0.0f, 1.0f);
-    ImGui::SliderFloat("exposure time", &motionBlurCBuffer->data.motion_blur_exposure_time, 1, 2000);
-    float fps = 1.0f / motionBlurCBuffer->data.motion_blur_fps_rate;
+    ImGui::SliderInt("iteration", &motionBlurCBuffer->data.motionBlurIteration, 0, 32);
+    ImGui::SliderFloat("jitter", &motionBlurCBuffer->data.motionBlurJitter, 0.0f, 1.0f);
+    ImGui::SliderFloat("exposure time", &motionBlurCBuffer->data.motionBlurExposureTime, 1, 2000);
+    float fps = 1.0f / motionBlurCBuffer->data.motionBlurFpsRate;
     ImGui::SliderFloat("fps", &fps, 1.0f, 120.0f);
-    motionBlurCBuffer->data.motion_blur_fps_rate = 1.0f / fps;
-
-
+    motionBlurCBuffer->data.motionBlurFpsRate = 1.0f / fps;
     ImGui::Text("Tile Max");
     ImGui::Image(tile_max_shader_resource_view.Get(), { 256, 144 }, { 0, 0 });
     ImGui::Text("Neighbor Max");

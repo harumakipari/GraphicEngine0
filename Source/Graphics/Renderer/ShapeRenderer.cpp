@@ -618,7 +618,7 @@ void ShapeRenderer::DrawLineSegment(ID3D11DeviceContext* immediateContext, const
 
 
 
-LineSegment::LineSegment(ID3D11Device* device, size_t maxPoints) : max_points(maxPoints)
+LineSegment::LineSegment(ID3D11Device* device, size_t maxPoints) : maxPoints(maxPoints)
 {
 }
 

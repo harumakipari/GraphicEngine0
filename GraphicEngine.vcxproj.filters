@@ -747,9 +747,6 @@
     <ClInclude Include="Source\Graphics\PostProcess\RadialBlurEffect.h">
       <Filter>Source\Graphics\PostProcess</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Graphics\PostProcess\MultipleRenderTargets.h">
-      <Filter>Source\Graphics\PostProcess</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Graphics\PostProcess\SceneEffectBase.h">
       <Filter>Source\Graphics\PostProcess</Filter>
     </ClInclude>

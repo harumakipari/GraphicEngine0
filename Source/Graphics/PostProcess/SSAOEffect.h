@@ -35,6 +35,4 @@ private:
     std::unique_ptr<ConstantBuffer<SSAOConstantBuffer>> ssaoCBuffer;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ssaoKernelPoints;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ssaoNoise;
-
-
 };

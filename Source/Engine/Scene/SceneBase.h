@@ -7,7 +7,6 @@
 #include "Graphics/Renderer/SceneRenderer.h"
 #include "Graphics/Environment/SkyMap.h"
 #include "Graphics/PostProcess/GBuffer.h"
-#include "Graphics/PostProcess/MultipleRenderTargets.h"
 #include "Graphics/Shadow/CascadeShadowMap.h"
 
 #include <d3d11.h>
@@ -129,7 +128,6 @@ protected:
 
     std::unique_ptr<CascadedShadowMaps> cascadedShadowMaps;
 
-    std::unique_ptr<MultipleRenderTargets> multipleRenderTargets;
     std::unique_ptr<GBuffer> gBufferRenderTarget;
     std::unique_ptr<SkyMap> skyMap;
     std::unique_ptr<LightManager> lightManager;
