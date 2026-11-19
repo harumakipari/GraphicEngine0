@@ -1,8 +1,6 @@
 #include "GltfModel.hlsli"
 #include "Sampler.hlsli"
-#include "Common.hlsli"
 #include "FilterFunctions.hlsli"
-#include "ShaderFunctions.hlsli"
 
 #define BASE_COLOR_TEXTURE 0 
 #define METALLIC_ROUGHNESS_TEXTURE 1 
@@ -70,7 +68,7 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         emissiveFactor *= sampled.rgb;
 
         if (objectType == OBJECT_PLAYER || objectType == OBJECT_ENEMY)
-        { // player�̎��̓G�~�b�V�u����߂ɏo��
+        { 
             emissiveFactor *= emissionPower;
             if (objectType == OBJECT_PLAYER)
             {
@@ -87,7 +85,6 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     if (metallicRoughnessTexture > -1)
     {
         float4 sampled = materialTextures[METALLIC_ROUGHNESS_TEXTURE].Sample(samplerStates[LINEAR], pin.texcoord);
-        //roughnessFactor = 1.0;
         roughnessFactor *= sampled.g;
         metallicFactor *= sampled.b;
     }
@@ -101,7 +98,6 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         float4 sampled = materialTextures[OCCLUSION_TEXTURE].Sample(samplerStates[LINEAR], pin.texcoord);
         occlusionFactor *= sampled.r;
     }
-    const float occlusionStrength = m.occlusionTexture.strength;
 
     float3 N = normalize(pin.wNormal.xyz);
     float3 T = hasTangent ? normalize(pin.wTangent.xyz) : float3(1, 0, 0.0001);
@@ -109,11 +105,6 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     T = normalize(T - N * dot(N, T));
     float3 B = normalize(cross(N, T) * sigma);
 
-    // TODO:�A���`�G�C���A�X�΍�Ƀ��t�l�X������鏈����ǉ�
-    //roughnessFactor = SpecularAntiAliasing(roughnessFactor, N, 0.05f);
-
-
-    //�w�ʂɂ��ẮA�ڐ������̊��x�N�g���͕��������]����B
     if (isFrontFace == false)
     {
         T = -T;
@@ -137,13 +128,11 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     pout.velocity = float4(velocity, 0, 1);
 
     if (materialType == MATERIAL_CLOTH || materialType == MATERIAL_FUR)
-    { // ���̎���
+    { 
         baseColorFactor.rgb = HueSaturation(baseColorFactor.rgb, modelHueShift, modelSaturation);
         baseColorFactor.rgb = BrightnessContrast(baseColorFactor.rgb, modelBrightness, modelContrast);
     }
 
-
-    // ��_���[�W���̐F�ύX����
     const float damageFlashAmount = saturate(flashValue);
     const float damageBodyAmount = saturate(damageFlashAmount * modelEffectParameter.edgeWidth);
     baseColorFactor.rgb = lerp(baseColorFactor.rgb, cpuColor.rgb, damageBodyAmount);
@@ -152,7 +141,7 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 
     pout.position = pin.wPosition; // world space 
 
-    pout.emissive = float4(emissiveFactor, GBUFFER_FLAG_NORMAL); // w�̒l : �X�J�C�}�b�v�P����ȊO�O    2: emissiveFlag�Ƃ��Ďg�p
+    pout.emissive = float4(emissiveFactor, GBUFFER_FLAG_NORMAL);
 
     if (materialType == MATERIAL_EYE)
     {
@@ -166,15 +155,14 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 
         float mask = maskColor * maskCenter;
         emissiveFactor = mask * float3(cpuColor.rgb) * emissionPower;
-        pout.emissive = float4(emissiveFactor, GBUFFER_FLAG_NORMAL); // w�̒l : �X�J�C�}�b�v�P����ȊO�O    2: emissiveFlag�Ƃ��Ďg�p
+        pout.emissive = float4(emissiveFactor, GBUFFER_FLAG_NORMAL);
     }
 
-    // ��_���[�W���̐F�ύX����
     const float3 V = normalize(cameraPosition.xyz - pin.wPosition.xyz);
     const float damageRimFactor = pow(1.0f - saturate(dot(N, V)), 3.0f);
     pout.emissive.rgb += cpuColor.rgb * damageRimFactor * damageFlashAmount * modelEffectParameter.edgePower;
 
-    pout.material = float4(metallicFactor, roughnessFactor, occlusionFactor, materialType /*�}�e���A���^�C�v*/);
+    pout.material = float4(metallicFactor, roughnessFactor, occlusionFactor, materialType );
     
     return pout;
 }

@@ -3,9 +3,7 @@
 #include <ranges>
 
 #include "Core/Actor.h"
-#include "Graphics/Resource/GeometricPrimitive.h"
 
-#include "Components/CollisionShape/CollisionComponent.h"
 #include "Animation/AnimationController.h"
 #include "Game/State/StateMachine.h"
 

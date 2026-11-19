@@ -169,11 +169,7 @@ void ShapeRenderer::DrawCapsule(ID3D11DeviceContext* immediateContext, const Dir
 { -1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1 },	// 2:RHS Z-UP
 { 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1 },		// 3:LHS Z-UP
 	};
-#if 1
 	const float scale_factor = 1.0f; // To change the units from centimeters to meters, set 'scale_factor' to 0.01.
-#else
-	const float scale_factor = 0.01f; // To change the units from centimeters to meters, set 'scale_factor' to 0.01.
-#endif
 	{//cylinder
 		DirectX::XMMATRIX C{ DirectX::XMLoadFloat4x4(&coordinate_system_transforms[0]) * DirectX::XMMatrixScaling(scale_factor, scale_factor, scale_factor) };
 		DirectX::XMMATRIX S{ DirectX::XMMatrixScaling(radius,(height - radius) ,radius) };
@@ -398,17 +394,14 @@ void ShapeRenderer::DrawBox(ID3D11DeviceContext* immediateContext, const DirectX
 
 	debugConstantCBuffer->Activate(immediateContext, 5);
 
-	const DirectX::XMFLOAT4X4 coordinate_system_transforms[]{
+	const DirectX::XMFLOAT4X4 coordinate_system_transforms[]
+    {
 { -1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 },	// 0:RHS Y-UP
 { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 },		// 1:LHS Y-UP
 { -1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1 },	// 2:RHS Z-UP
 { 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1 },		// 3:LHS Z-UP
 	};
-#if 1
-	const float scale_factor = 1.0f; // To change the units from centimeters to meters, set 'scale_factor' to 0.01.
-#else
-	const float scale_factor = 0.01f; // To change the units from centimeters to meters, set 'scale_factor' to 0.01.
-#endif
+	const float scale_factor = 1.0f;
 	{//cube
 		DirectX::XMMATRIX C{ DirectX::XMLoadFloat4x4(&coordinate_system_transforms[0]) * DirectX::XMMatrixScaling(scale_factor, scale_factor, scale_factor) };
 		DirectX::XMMATRIX S{ DirectX::XMMatrixScaling(size.x,size.y,size.z) };
@@ -434,11 +427,7 @@ void ShapeRenderer::DrawBoxCenter(ID3D11DeviceContext* immediateContext, const D
 { -1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1 },	// 2:RHS Z-UP
 { 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1 },		// 3:LHS Z-UP
 	};
-#if 1
-	const float scale_factor = 1.0f; // To change the units from centimeters to meters, set 'scale_factor' to 0.01.
-#else
-	const float scale_factor = 0.01f; // To change the units from centimeters to meters, set 'scale_factor' to 0.01.
-#endif
+	const float scale_factor = 1.0f; 
 	{//cube
 		DirectX::XMMATRIX C{ DirectX::XMLoadFloat4x4(&coordinate_system_transforms[0]) * DirectX::XMMatrixScaling(scale_factor, scale_factor, scale_factor) };
 		DirectX::XMMATRIX S{ DirectX::XMMatrixScaling(size.x,size.y,size.z) };
@@ -446,9 +435,7 @@ void ShapeRenderer::DrawBoxCenter(ID3D11DeviceContext* immediateContext, const D
 		DirectX::XMMATRIX T{ DirectX::XMMatrixTranslation(position.x,position.y,position.z) };
 		DirectX::XMFLOAT4X4 world;
 		DirectX::XMStoreFloat4x4(&world, C * S * R * T);
-		//TODO:03 debugShapeはRenderPassをOpaqueにしている
 		cubeCenter->Render(immediateContext, world, {}, InterleavedGltfModel::RenderPass::All);
-		//cubeCenter->Render(immediateContext, world, {}, InterleavedGltfModel::RenderPass::Blend);
 	}
 }
 
@@ -515,7 +502,6 @@ void ShapeRenderer::DrawSegment(ID3D11DeviceContext* immediateContext, const Dir
 {
 	using namespace DirectX;
 	const float radius = 0.05f;
-	// directionVector = endPosition - startPosition 
 	DirectX::XMFLOAT3 vector = { endPosition.x - startPosition.x,endPosition.y - startPosition.y,endPosition.z - startPosition.z };
 	DirectX::XMVECTOR Vec = DirectX::XMLoadFloat3(&vector);
 	float height = DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(Vec));
@@ -527,12 +513,7 @@ void ShapeRenderer::DrawSegment(ID3D11DeviceContext* immediateContext, const Dir
 { -1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1 },	// 2:RHS Z-UP
 { 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1 },		// 3:LHS Z-UP
 	};
-#if 1
-	const float scale_factor = 1.0f; // To change the units from centimeters to meters, set 'scale_factor' to 0.01.
-#else
-	const float scale_factor = 0.01f; // To change the units from centimeters to meters, set 'scale_factor' to 0.01.
-#endif
-
+	const float scale_factor = 1.0f; 
 
 	//　高さ　÷　直径　切り上げ
 	int sphereNum = static_cast<int>(std::ceil(height / (radius * 2)));
@@ -614,14 +595,4 @@ void ShapeRenderer::DrawLineSegment(ID3D11DeviceContext* immediateContext, const
 	debugConstantCBuffer->Activate(immediateContext, 5);
 
 	immediateContext->Draw(2, 0);
-}
-
-
-
-LineSegment::LineSegment(ID3D11Device* device, size_t maxPoints) : maxPoints(maxPoints)
-{
-}
-
-void LineSegment::Draw(ID3D11DeviceContext* immediate_context, const DirectX::XMFLOAT4X4& view_projection, const DirectX::XMFLOAT4& color, const std::vector<DirectX::XMFLOAT3>& points, Type type)
-{
 }

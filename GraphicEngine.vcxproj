@@ -430,7 +430,6 @@
     <ClCompile Include="Source\Graphics\Renderer\SpriteRenderer.cpp" />
     <ClCompile Include="Source\Graphics\Renderer\TrailRenderer.cpp" />
     <ClCompile Include="Source\Graphics\Resource\AssetManager.cpp" />
-    <ClCompile Include="Source\Graphics\Resource\GeometricPrimitive.cpp" />
     <ClCompile Include="Source\Graphics\Resource\InterleavedGltfModel.cpp" />
     <ClCompile Include="Source\Graphics\Resource\ShaderToy.cpp" />
     <ClCompile Include="Source\Graphics\Resource\Texture.cpp" />
@@ -675,7 +674,6 @@
     <ClInclude Include="Source\Graphics\Renderer\ShapeRenderer.h" />
     <ClInclude Include="Source\Graphics\Renderer\SpriteRenderer.h" />
     <ClInclude Include="Source\Graphics\Renderer\TrailRenderer.h" />
-    <ClInclude Include="Source\Graphics\Resource\GeometricPrimitive.h" />
     <ClInclude Include="Source\Graphics\Resource\InterleavedGltfModel.h" />
     <ClInclude Include="Source\Graphics\Resource\AssetManager.h" />
     <ClInclude Include="Source\Graphics\Resource\ModelType.h" />
@@ -959,14 +957,6 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="Shader\geometricPrimitivePS.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
-    </FxCompile>
-    <FxCompile Include="Shader\geometricPrimitiveVS.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
-    </FxCompile>
     <FxCompile Include="Shader\GlowExtractionPS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
@@ -1165,7 +1155,6 @@
     <None Include="Shader\Font.hlsli" />
     <None Include="Shader\FullScreenQuad.hlsli" />
     <None Include="Shader\GBuffer.hlsli" />
-    <None Include="Shader\geometricPrimitive.hlsli" />
     <None Include="Shader\GltfModel.hlsli" />
     <None Include="Shader\HuskParticles.hlsli" />
     <None Include="Shader\HuskParticleConstants.hlsli" />

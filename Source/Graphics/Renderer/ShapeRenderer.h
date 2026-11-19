@@ -106,36 +106,3 @@ private:
 
 };
 
-class LineSegment
-{
-public:
-    enum class Type
-    {
-        Line,// –³ŒÀ‚ÉL‚Ñ‚éü
-        Segment,// ‹æØ‚ç‚ê‚½ü•ª
-        Point// “_•`‰æ
-    };
-
-    LineSegment(ID3D11Device* device, size_t maxSegments);
-
-    virtual ~LineSegment() = default;
-
-    void Draw(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4& viewProjection, const DirectX::XMFLOAT4& color, const std::vector<DirectX::XMFLOAT3>& points, Type type);
-private:
-    struct Constants
-    {
-        DirectX::XMFLOAT4X4 viewProjection;
-        DirectX::XMFLOAT4 color;
-    };
-
-    Microsoft::WRL::ComPtr<ID3D11Buffer> vertexBuffer;
-
-    Microsoft::WRL::ComPtr<ID3D11VertexShader> vertexShader;
-    Microsoft::WRL::ComPtr<ID3D11PixelShader> pixelShader; 
-    Microsoft::WRL::ComPtr<ID3D11InputLayout> inputLayout; 
-
-    Microsoft::WRL::ComPtr<ID3D11Buffer> constantBuffer;
-
-    const size_t maxPoints; // “à•”‚Å•Û‚Å‚«‚éÅ‘å’¸“_” 
-
-};

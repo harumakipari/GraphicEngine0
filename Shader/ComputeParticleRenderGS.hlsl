@@ -126,7 +126,6 @@ void main(point GS_IN gin[1], inout TriangleStream<PS_IN> output)
     }
 
     //ビルボード行列生成（ビュー行列の逆行列でいい。ただし移動値はいらない）
-    //TODO: InverseView行列を定数バッファに設定する。
     float4x4 billbordMatrix = invView;
     billbordMatrix._41_42_43 = float3(0, 0, 0);
     billbordMatrix._44 = 1.0f;

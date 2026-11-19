@@ -232,9 +232,6 @@
     <ClCompile Include="Source\Graphics\Resource\AssetManager.cpp">
       <Filter>Source\Graphics\Resource</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Graphics\Resource\GeometricPrimitive.cpp">
-      <Filter>Source\Graphics\Resource</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Graphics\Resource\InterleavedGltfModel.cpp">
       <Filter>Source\Graphics\Resource</Filter>
     </ClCompile>
@@ -693,9 +690,6 @@
     <ClInclude Include="Source\Graphics\Renderer\TrailRenderer.h">
       <Filter>Source\Graphics\Renderer</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Graphics\Resource\GeometricPrimitive.h">
-      <Filter>Source\Graphics\Resource</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Graphics\Resource\InterleavedGltfModel.h">
       <Filter>Source\Graphics\Resource</Filter>
     </ClInclude>
@@ -1079,12 +1073,6 @@
     <FxCompile Include="Shader\DeferredLightingPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Shader\geometricPrimitivePS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Shader\geometricPrimitiveVS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
     <FxCompile Include="Shader\GlowExtractionPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
@@ -1226,9 +1214,6 @@
       <Filter>Shader</Filter>
     </None>
     <None Include="Shader\GBuffer.hlsli">
-      <Filter>Shader</Filter>
-    </None>
-    <None Include="Shader\geometricPrimitive.hlsli">
       <Filter>Shader</Filter>
     </None>
     <None Include="Shader\GltfModel.hlsli">

@@ -198,7 +198,6 @@ void AudioSourceComponent::SetPan(float pan)
     this->pan = std::clamp(pan, -1.0f, 1.0f);
     hasPanOverride = true;
 
-    // TODO:‰½ŒÌ‚©Š®‘S‚É¶‚ÉŠñ‚Á‚Ä‚µ‚Ü‚¤
     float outputMatrix[8] = {};
     float left = 1.0f - (this->pan * 0.5f + 0.5f);
     float right = this->pan * 0.5f + 0.5f;
