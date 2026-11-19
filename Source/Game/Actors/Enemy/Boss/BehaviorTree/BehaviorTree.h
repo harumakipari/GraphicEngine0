@@ -28,7 +28,7 @@ public:
 	~BehaviorTree();
 
 	// ルートノードから実行ノードを推論する
-	NodeBase* ActiveNodeInference(BehaviorData* data);
+	NodeBase* ActiveNodeInference(BehaviorData* data) const;
 
 	// シーケンスノード、シーケンシャルルーピングノードで次に実行するノードを推論する
 	NodeBase* SequenceBack(NodeBase* sequenceNode, BehaviorData* data);

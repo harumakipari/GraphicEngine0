@@ -15,24 +15,28 @@ public:
     using ActionBase::ActionBase;
     State Run(float) override;
 };
+
 class FaceDashPlayerIfNeeded : public ActionBase
 {
 public:
     using ActionBase::ActionBase;
     State Run(float) override;
 };
+
 class CanExecuteDashAttack : public ActionBase
 {
 public:
     using ActionBase::ActionBase;
     State Run(float) override;
 };
+
 class StartDashAttack : public ActionBase
 {
 public:
     using ActionBase::ActionBase;
     State Run(float) override;
 };
+
 class ExecuteDashAttack : public ActionBase
 {
 public:

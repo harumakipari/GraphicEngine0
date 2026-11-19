@@ -11,6 +11,16 @@ NodeBase::~NodeBase()
 {
 }
 
+bool NodeBase::Judgment() const
+{
+    // judgmentあればメンバ関数Judgment()実行した結果をリターン。
+    if (judgment)
+    {
+        return judgment->Judgment();
+    }
+    return true;
+}
+
 // ノード検索
 std::weak_ptr<NodeBase> NodeBase::SearchNode(const std::string& searchName)
 {
@@ -60,18 +70,18 @@ NodeBase* NodeBase::Inference(BehaviorData* data)
     // 選択ルールでノード決め
     switch (selectRule)
     {
-        // 優先順位
+    // 優先順位
     case BehaviorTree::SelectRule::Priority:
         result = SelectPriority(&list);
         break;
-        // ランダム
+    // ランダム
     case BehaviorTree::SelectRule::Random:
         result = SelectRandom(&list);
         break;
     case BehaviorTree::SelectRule::AttackRandom:
         result = SelectAttackRandom(&list);
         break;
-        // シーケンス
+    // シーケンス
     case BehaviorTree::SelectRule::Sequence:
     case BehaviorTree::SelectRule::SequentialLooping:
         result = SelectSequence(&list, data);
@@ -95,8 +105,27 @@ NodeBase* NodeBase::Inference(BehaviorData* data)
     return result;
 }
 
+
+// ノード実行
+ActionBase::State NodeBase::Run(float elapsedTime) const
+{
+    // actionあればメンバ関数Run()実行した結果をリターン。
+    if (action)
+    {
+        return action->Run(elapsedTime);
+    }
+
+    return ActionBase::State::Failed;
+}
+
+// 判定
+void NodeBase::ResetActionRuntimes() const
+{
+    if (action) action->ResetRuntime();
+    for (const auto& child : children) child->ResetActionRuntimes();
+}
 // 優先順位でノード選択
-NodeBase* NodeBase::SelectPriority(std::vector<std::shared_ptr<NodeBase>>* list)
+NodeBase* NodeBase::SelectPriority(const std::vector<std::shared_ptr<NodeBase>>* list)
 {
     NodeBase* selectNode = nullptr;
     int priority = INT_MAX;
@@ -114,9 +143,8 @@ NodeBase* NodeBase::SelectPriority(std::vector<std::shared_ptr<NodeBase>>* list)
     return selectNode;
 }
 
-
 // ランダムでノード選択
-NodeBase* NodeBase::SelectRandom(std::vector<std::shared_ptr<NodeBase>>* list)
+NodeBase* NodeBase::SelectRandom(const std::vector<std::shared_ptr<NodeBase>>* list)
 {
     if (list->empty()) return nullptr;
     int selectNo = 0;
@@ -128,7 +156,7 @@ NodeBase* NodeBase::SelectRandom(std::vector<std::shared_ptr<NodeBase>>* list)
     return list->at(selectNo).get();
 }
 
-NodeBase* NodeBase::SelectAttackRandom(std::vector<std::shared_ptr<NodeBase>>* list)
+NodeBase* NodeBase::SelectAttackRandom(const std::vector<std::shared_ptr<NodeBase>>* list) const
 {
     if (!list || list->empty()) return nullptr;
 
@@ -142,9 +170,9 @@ NodeBase* NodeBase::SelectAttackRandom(std::vector<std::shared_ptr<NodeBase>>* l
 
     const bool nearFront = owner && owner->IsNearFrontForAttackSelection();
     const float fastComboBaseProbability = nearFront && fast
-        ? owner->GetNearFrontFastComboProbability() : 0.0f;
+                                               ? owner->GetNearFrontFastComboProbability() : 0.0f;
     const float fastComboPenalty = fast && owner
-        ? owner->GetAttackRepeatPenaltyForPlan(fast->GetName()) : 1.0f;
+                                       ? owner->GetAttackRepeatPenaltyForPlan(fast->GetName()) : 1.0f;
     const float fastComboEffectiveProbability = std::clamp(
         fastComboBaseProbability * fastComboPenalty, 0.0f, 1.0f);
     const float roll = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
@@ -181,6 +209,7 @@ NodeBase* NodeBase::SelectAttackRandom(std::vector<std::shared_ptr<NodeBase>>* l
 
     return selected;
 }
+
 // シーケンス・シーケンシャルルーピングでノード選択
 NodeBase* NodeBase::SelectSequence(std::vector<std::shared_ptr<NodeBase>>* list, BehaviorData* data)
 {
@@ -222,33 +251,4 @@ NodeBase* NodeBase::SelectSequence(std::vector<std::shared_ptr<NodeBase>>* list,
     }
     // 指定された中間ノードに実行可能ノードがないのでnullptrをリターンする
     return nullptr;
-}
-
-// 判定
-void NodeBase::ResetActionRuntimes()
-{
-    if (action) action->ResetRuntime();
-    for (const auto& child : children) child->ResetActionRuntimes();
-}
-
-bool NodeBase::Judgment()
-{
-    // judgmentあればメンバ関数Judgment()実行した結果をリターン。
-    if (judgment)
-    {
-        return judgment->Judgment();
-    }
-    return true;
-}
-
-// ノード実行
-ActionBase::State NodeBase::Run(float elapsedTime)
-{
-    // actionあればメンバ関数Run()実行した結果をリターン。
-    if (action)
-    {
-        return action->Run(elapsedTime);
-    }
-
-    return ActionBase::State::Failed;
 }

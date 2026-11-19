@@ -3,25 +3,6 @@
 #include "NodeBase.h"
 
 
-// FastCombo conditions
-bool CanPlanFastCombo::Judgment()
-{
-    const bool result = owner->CanPlanFastCombo();
-    return result;
-}
-
-bool CanExecuteFastCombo::Judgment()
-{
-    const bool result = owner->CanExecuteFastCombo();
-    return result;
-}
-
-// Common BT: death and idle
-bool DeadJudgment::Judgment()
-{
-    return owner->IsDead();
-}
-
 ActionBase::State BTStartDeath::Run(float)
 {
     return State::Complete;
@@ -30,6 +11,11 @@ ActionBase::State BTStartDeath::Run(float)
 ActionBase::State BTExecuteDeath::Run(float)
 {
     return owner->IsDead() ? State::Run : State::Complete;
+}
+
+bool DeadJudgment::Judgment()
+{
+    return owner->IsDead();
 }
 
 ActionBase::State BTIdle::Run(float deltaTime)
@@ -54,7 +40,18 @@ ActionBase::State BTIdle::Run(float deltaTime)
     return State::Complete;
 }
 
-// FastCombo action nodes
+bool CanPlanFastCombo::Judgment()
+{
+    const bool result = owner->CanPlanFastCombo();
+    return result;
+}
+
+bool CanExecuteFastCombo::Judgment()
+{
+    const bool result = owner->CanExecuteFastCombo();
+    return result;
+}
+
 ActionBase::State ApproachIfNeeded::Run(float dt)
 {
     if (owner->IsFastComboInRange())
@@ -98,29 +95,6 @@ ActionBase::State FacePlayerIfNeeded::Run(float dt)
     return owner->IsPlayerInFastComboFaceCompleteRange(owner->BuildTargetContext()) ? State::Complete : State::Run;
 }
 
-ActionBase::State PrepareFastCombo::Run(float deltaTime)
-{
-    if (!started)
-    {
-        timer = 0.0f;
-        started = true;
-        owner->StopAIMovement();
-        const auto controller = owner->GetBodyAnimationController();
-        if (!controller || controller->GetCurrentAnimationName() != "TravelMode_Idle_0")
-        {
-            owner->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
-        }
-        CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_attack_ready1.wav", 1.0f);
-        owner->StartWeaponTelegraph("Attack_A_Fast_0");
-    }
-    timer += deltaTime;
-    if (timer < owner->GetBehaviorPrepareDuration())
-        return State::Run;
-    started = false;
-    return State::Complete;
-}
-
-
 ActionBase::State StartFastCombo::Run(float)
 {
     owner->SetSelectedAttackForBehaviorTree(BossAttackType::FastCombo);
@@ -128,6 +102,7 @@ ActionBase::State StartFastCombo::Run(float)
     owner->OnSelectedActionStartedSuccessfully();
     return State::Complete;
 }
+
 
 ActionBase::State ExecuteFastCombo::Run(float dt)
 {
@@ -211,7 +186,28 @@ ActionBase::State ExecuteFastCombo::Run(float dt)
     return State::Complete;
 }
 
-// FastCombo planning and approach
+ActionBase::State PrepareFastCombo::Run(float deltaTime)
+{
+    if (!started)
+    {
+        timer = 0.0f;
+        started = true;
+        owner->StopAIMovement();
+        const auto controller = owner->GetBodyAnimationController();
+        if (!controller || controller->GetCurrentAnimationName() != "TravelMode_Idle_0")
+        {
+            owner->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
+        }
+        CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_attack_ready1.wav", 1.0f);
+        owner->StartWeaponTelegraph("Attack_A_Fast_0");
+    }
+    timer += deltaTime;
+    if (timer < owner->GetBehaviorPrepareDuration())
+        return State::Run;
+    started = false;
+    return State::Complete;
+}
+
 bool GruxEnemy::CanPlanFastCombo() const
 {
     if (IsFastComboApproachRetryCooldownActive())
@@ -240,11 +236,6 @@ void GruxEnemy::StartFastComboApproachRetryCooldown()
     fastComboApproachRetryRemaining = fastComboApproachRetryCooldown;
 }
 
-bool GruxEnemy::IsFastComboApproachRetryCooldownActive() const
-{
-    return fastComboApproachRetryRemaining > 0.0f;
-}
-
 bool GruxEnemy::CanExecuteFastCombo() const
 {
     const auto c = BuildTargetContext();
@@ -269,24 +260,19 @@ bool GruxEnemy::IsFastComboInRange() const
     return c.xzDistance >= closeCombatSettings.minRange && c.xzDistance <= closeCombatSettings.executeMaxRange;
 }
 
-bool GruxEnemy::IsPlayerInFastComboFacingRange(const BossTargetContext& c) const
-{
-    return c.valid && c.absoluteAngleDegrees <= closeCombatSettings.facingLimitDegrees;
-}
-
 bool GruxEnemy::IsPlayerInFastComboFaceCompleteRange(const BossTargetContext& c) const
 {
     return c.valid && c.absoluteAngleDegrees <= closeCombatSettings.faceCompleteAngleDegrees;
 }
 
-void GruxEnemy::BeginFastComboApproach()
+void GruxEnemy::BeginFastComboApproach() const
 {
     const auto controller = GetBodyAnimationController();
     if (!controller || controller->GetCurrentAnimationName() != "TravelMode_Fwd_0")
         PlayBodyAnimation("TravelMode_Fwd_0", true, true, 0.15f, true);
 }
 
-bool GruxEnemy::UpdateFastComboApproach(float dt)
+bool GruxEnemy::UpdateFastComboApproach(float dt) const
 {
     const auto c = BuildTargetContext();
     if (!c.valid)
@@ -310,11 +296,19 @@ bool GruxEnemy::UpdateFastComboApproach(float dt)
     return false;
 }
 
-
-// Common recovery
 void GruxEnemy::BeginRecovery() const
 {
     PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.5f, true);
+}
+
+bool GruxEnemy::IsFastComboApproachRetryCooldownActive() const
+{
+    return fastComboApproachRetryRemaining > 0.0f;
+}
+
+bool GruxEnemy::IsPlayerInFastComboFacingRange(const BossTargetContext& c) const
+{
+    return c.valid && c.absoluteAngleDegrees <= closeCombatSettings.facingLimitDegrees;
 }
 
 

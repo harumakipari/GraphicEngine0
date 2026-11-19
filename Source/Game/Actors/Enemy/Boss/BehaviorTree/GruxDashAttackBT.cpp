@@ -9,8 +9,7 @@ void GruxEnemy::BeginDashTelegraphVisual()
 	HideDashTelegraphVisual();
 	dashTelegraphLineStart = dashAttackStartPosition;
 	dashTelegraphLineEnd = dashBTPredictedKnockupPosition;
-	const DirectX::XMFLOAT3 fanPosition = { dashBTPredictedKnockupPosition.x,
-		dashTelegraphFanYOffset, dashBTPredictedKnockupPosition.z };
+	const DirectX::XMFLOAT3 fanPosition = { dashBTPredictedKnockupPosition.x,dashTelegraphFanYOffset, dashBTPredictedKnockupPosition.z };
 	const DirectX::XMFLOAT3 fanForward = dashAttackDirection;
 	const float dx = dashTelegraphLineEnd.x - dashTelegraphLineStart.x;
 	const float dz = dashTelegraphLineEnd.z - dashTelegraphLineStart.z;
@@ -250,14 +249,12 @@ void GruxEnemy::HideDashTelegraphVisual()
 	}
 }
 
-// Dash BT nodes
 bool DashPlanAvailable::Judgment()
 {
 	return owner->IsBattleAIActive() &&
 		!owner->IsStunned() &&
 		owner->CanPlanDashAttack();
 }
-
 
 ActionBase::State PrepareDashSetupTarget::Run(float)
 {
@@ -297,253 +294,251 @@ ActionBase::State ExecuteDashAttack::Run(float deltaTime)
 	}
 }
 
-// Dash planning and preparation
 bool GruxEnemy::CanPlanDashAttack() const
 {
-	if (IsDead() || !BuildTargetContext().valid || IsDeathPresentationActive())
-		return false;
-	for (size_t i = 0; i < combatActionData.size(); ++i)
-	{
-		if (combatActionData[i].type == BossActionType::DashAttack)
-			return combatActionCooldownRemaining[i] <= 0.0f;
-	}
-	return false;
+    if (IsDead() || !BuildTargetContext().valid || IsDeathPresentationActive())
+        return false;
+    for (size_t i = 0; i < combatActionData.size(); ++i)
+    {
+        if (combatActionData[i].type == BossActionType::DashAttack)
+            return combatActionCooldownRemaining[i] <= 0.0f;
+    }
+    return false;
 }
 
 bool GruxEnemy::PrepareDashAttackSetupTarget()
 {
-	if (!CanPlanDashAttack())
-		return false;
-	dashBTPhase = DashBTPhase::Setup;
-	dashBTPreviousAction = selectedActionType;
-	selectedAttackType = BossAttackType::DashAttack;
-	selectedActionType = BossActionType::DashAttack;
-	StopAttackSetupMovement();
-	ClearAttackSetupTarget();
+    if (!CanPlanDashAttack())
+        return false;
+    dashBTPhase = DashBTPhase::Setup;
+    dashBTPreviousAction = selectedActionType;
+    selectedAttackType = BossAttackType::DashAttack;
+    selectedActionType = BossActionType::DashAttack;
+    StopAttackSetupMovement();
+    ClearAttackSetupTarget();
 
-	DirectX::XMFLOAT3 target{};
-	if (!FindAttackSetupTarget(dashSetupDistanceMin, dashSetupDistanceMax,
-		attackSetupCandidateAngleStep, attackSetupClampTolerance, dashSetupMinimumMoveDistance,
-		target))
-	{
-		CleanupDashAttackBT();
-		return false;
-	}
-	if (!SelectAttackSetupMoveDirection(target))
-	{
-		CleanupDashAttackBT();
-		return false;
-	}
-	attackSetupTarget = {};
-	attackSetupTarget.valid = true;
-	attackSetupTarget.targetPosition = target;
-	attackSetupTarget.stuckMovementThreshold = 0.01f;
-	return true;
+    DirectX::XMFLOAT3 target{};
+    if (!FindAttackSetupTarget(dashSetupDistanceMin, dashSetupDistanceMax,
+                               attackSetupCandidateAngleStep, attackSetupClampTolerance, dashSetupMinimumMoveDistance,
+                               target))
+    {
+        CleanupDashAttackBT();
+        return false;
+    }
+    if (!SelectAttackSetupMoveDirection(target))
+    {
+        CleanupDashAttackBT();
+        return false;
+    }
+    attackSetupTarget = {};
+    attackSetupTarget.valid = true;
+    attackSetupTarget.targetPosition = target;
+    attackSetupTarget.stuckMovementThreshold = 0.01f;
+    return true;
 }
 
 bool GruxEnemy::CanExecuteDashAttack() const
 {
-	return !IsDead() && BuildTargetContext().valid &&
-		dashBTPhase == DashBTPhase::Facing && !dashBTAttackStarted &&
-		selectedAttackType == BossAttackType::DashAttack && attackSetupTarget.valid &&
-		!attackSetupRuntime.movementActive && !dashAttackMovementActive &&
-		characterMovementComponent && rotationComponent && GetBodyAnimationController();
+    return !IsDead() && BuildTargetContext().valid &&
+        dashBTPhase == DashBTPhase::Facing && !dashBTAttackStarted &&
+        selectedAttackType == BossAttackType::DashAttack && attackSetupTarget.valid &&
+        !attackSetupRuntime.movementActive && !dashAttackMovementActive &&
+        characterMovementComponent && rotationComponent && GetBodyAnimationController();
 }
 
-// Dash execution and cleanup
 bool GruxEnemy::StartDashAttackTelegraph()
 {
-	if (!CanExecuteDashAttack())
-		return false;
-	const auto controller = GetBodyAnimationController();
-	for (const char* animation : { "Pre_Stampede_0", "Stampede_0", "Stampede_Knockup_0" })
-	{
-		if (!controller->GetAnimationAsset(animation))
-			return false;
-	}
-	StopAttackSetupMovement();
-	ClearAttackSetupTarget();
-	StartAttack();
-	dashBTAttackStarted = true;
-	const bool isTripleDash = IsBossInFinalPhase();
-	dashBTDashIndex = 0;
-	dashBTDashMaxCount = isTripleDash ? 3 : 1;
-	dashBTCurrentDashHitStartCount = GetCurrentAttackHitCount();
-	dashBTAbortRemainingDashes = false;
-	dashBTTransitionElapsed = 0.0f;
-	dashBTDirectionLocked = false;
-	dashBTMovementSnapshotPrepared = false;
-	dashBTDirectionLockRequested = false;
-	dashBTDashStartRequested = false;
-	dashBTPhase = DashBTPhase::Telegraph;
-	if (!PlayAttackStage(BossAttackType::DashAttack, 0))
-		return false;
-	OnSelectedActionStartedSuccessfully();
-	return true;
+    if (!CanExecuteDashAttack())
+        return false;
+    const auto controller = GetBodyAnimationController();
+    for (const char* animation : { "Pre_Stampede_0", "Stampede_0", "Stampede_Knockup_0" })
+    {
+        if (!controller->GetAnimationAsset(animation))
+            return false;
+    }
+    StopAttackSetupMovement();
+    ClearAttackSetupTarget();
+    StartAttack();
+    dashBTAttackStarted = true;
+    const bool isTripleDash = IsBossInFinalPhase();
+    dashBTDashIndex = 0;
+    dashBTDashMaxCount = isTripleDash ? 3 : 1;
+    dashBTCurrentDashHitStartCount = GetCurrentAttackHitCount();
+    dashBTAbortRemainingDashes = false;
+    dashBTTransitionElapsed = 0.0f;
+    dashBTDirectionLocked = false;
+    dashBTMovementSnapshotPrepared = false;
+    dashBTDirectionLockRequested = false;
+    dashBTDashStartRequested = false;
+    dashBTPhase = DashBTPhase::Telegraph;
+    if (!PlayAttackStage(BossAttackType::DashAttack, 0))
+        return false;
+    OnSelectedActionStartedSuccessfully();
+    return true;
 }
 
 GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
 {
-	const auto controller = GetBodyAnimationController();
-	if (IsDead() || !controller || !dashBTAttackStarted)
-		return DashBTResult::Failed;
-	const float dt = (std::max)(0.0f, deltaTime);
-	switch (dashBTPhase)
-	{
-	case DashBTPhase::Telegraph:
-	{
-		const auto context = BuildTargetContext();
-		if (!context.valid)
-			return DashBTResult::Failed;
-		StopAIMovement();
+    const auto controller = GetBodyAnimationController();
+    if (IsDead() || !controller || !dashBTAttackStarted)
+        return DashBTResult::Failed;
+    const float dt = (std::max)(0.0f, deltaTime);
+    switch (dashBTPhase)
+    {
+    case DashBTPhase::Telegraph:
+        {
+            const auto context = BuildTargetContext();
+            if (!context.valid)
+                return DashBTResult::Failed;
+            StopAIMovement();
 
-		if (!dashBTDirectionLocked)
-			RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt);
+            if (!dashBTDirectionLocked)
+                RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt);
 
-		if (!dashBTDirectionLocked && dashBTDirectionLockRequested)
-		{
-			dashBTDirectionLockRequested = false;
-			if (!PrepareDashAttackMovementSnapshot())
-				return DashBTResult::Failed;
-			dashBTDirectionLocked = true;
-			BeginDashTelegraphVisual();
-		}
+            if (!dashBTDirectionLocked && dashBTDirectionLockRequested)
+            {
+                dashBTDirectionLockRequested = false;
+                if (!PrepareDashAttackMovementSnapshot())
+                    return DashBTResult::Failed;
+                dashBTDirectionLocked = true;
+                BeginDashTelegraphVisual();
+            }
 
-		if (dashBTDirectionLocked && dashBTDashStartRequested)
-		{
-			dashBTDashStartRequested = false;
-			BeginAdditionalAttackStage();
-			if (!PlayAttackStage(BossAttackType::DashAttack, 1))
-				return DashBTResult::Failed;
-			BeginDashTelegraphLineShrink();
-			dashBTPhase = DashBTPhase::Movement;
-			return DashBTResult::Running;
-		}
-		if (controller->GetCurrentAnimationName() != "Pre_Stampede_0" ||
-			!controller->IsPlayAnimation())
-			return DashBTResult::Failed;
-		return DashBTResult::Running;
-	}
-	case DashBTPhase::Movement:
-	{
-		if (GetCurrentAttackHitCount() > dashBTCurrentDashHitStartCount ||
-			WasCurrentAttackSequenceJustDodged())
-		{
-			dashBTAbortRemainingDashes = true;
-		}
-		const bool finished = UpdateDashAttackMovement(dt, true);
-		if (!finished && controller->IsPlayAnimation())
-			return DashBTResult::Running;
-		if (GetCurrentAttackHitCount() > dashBTCurrentDashHitStartCount ||
-			WasCurrentAttackSequenceJustDodged())
-		{
-			dashBTAbortRemainingDashes = true;
-		}
-		StopDashAttackMovement();
-		BeginAdditionalAttackStage();
-		dashBTCurrentDashHitStartCount = GetCurrentAttackHitCount();
-		if (!PlayAttackStage(BossAttackType::DashAttack, 2))
-			return DashBTResult::Failed;
-		dashBTPhase = DashBTPhase::Knockup;
-		return DashBTResult::Running;
-	}
-	case DashBTPhase::Knockup:
-		if (GetCurrentAttackHitCount() > dashBTCurrentDashHitStartCount ||
-			WasCurrentAttackSequenceJustDodged())
-		{
-			dashBTAbortRemainingDashes = true;
-		}
-		if (controller->IsPlayAnimation())
-			return DashBTResult::Running;
-		if (!dashBTAbortRemainingDashes && dashBTDashIndex + 1 < dashBTDashMaxCount)
-		{
-			StopDashAttackMovement();
-			DisableAttackHitBoxes();
-			dashBTPhase = DashBTPhase::InterDashTransition;
-			dashBTTransitionElapsed = 0.0f;
-			dashBTDirectionLocked = false;
-			dashBTMovementSnapshotPrepared = false;
-			dashBTDirectionLockRequested = false;
-			dashBTDashStartRequested = false;
-			return DashBTResult::Running;
-		}
-		FinishDashAttackBT();
-		return DashBTResult::Complete;
-	case DashBTPhase::InterDashTransition:
-	{
-		StopDashAttackMovement();
-		DisableAttackHitBoxes();
-		const auto context = BuildTargetContext();
-		if (!context.valid)
-			return DashBTResult::Failed;
-		const float transitionDuration = (std::max)(0.0f, dashBTTransitionDuration);
-		const float trackingDuration = std::clamp(dashBTInterDashTrackingDuration,
-			0.0f, transitionDuration);
-		if (!dashBTDirectionLocked && dashBTTransitionElapsed < trackingDuration)
-			RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt);
-		dashBTTransitionElapsed += dt;
-		if (!dashBTDirectionLocked && dashBTTransitionElapsed >= trackingDuration)
-		{
-			if (!PrepareDashAttackMovementSnapshot())
-				return DashBTResult::Failed;
-			dashBTDirectionLocked = true;
-			BeginDashTelegraphVisual();
-		}
-		if (dashBTTransitionElapsed < transitionDuration)
-			return DashBTResult::Running;
+            if (dashBTDirectionLocked && dashBTDashStartRequested)
+            {
+                dashBTDashStartRequested = false;
+                BeginAdditionalAttackStage();
+                if (!PlayAttackStage(BossAttackType::DashAttack, 1))
+                    return DashBTResult::Failed;
+                BeginDashTelegraphLineShrink();
+                dashBTPhase = DashBTPhase::Movement;
+                return DashBTResult::Running;
+            }
+            if (controller->GetCurrentAnimationName() != "Pre_Stampede_0" ||
+                !controller->IsPlayAnimation())
+                return DashBTResult::Failed;
+            return DashBTResult::Running;
+        }
+    case DashBTPhase::Movement:
+        {
+            if (GetCurrentAttackHitCount() > dashBTCurrentDashHitStartCount ||
+                WasCurrentAttackSequenceJustDodged())
+            {
+                dashBTAbortRemainingDashes = true;
+            }
+            const bool finished = UpdateDashAttackMovement(dt, true);
+            if (!finished && controller->IsPlayAnimation())
+                return DashBTResult::Running;
+            if (GetCurrentAttackHitCount() > dashBTCurrentDashHitStartCount ||
+                WasCurrentAttackSequenceJustDodged())
+            {
+                dashBTAbortRemainingDashes = true;
+            }
+            StopDashAttackMovement();
+            BeginAdditionalAttackStage();
+            dashBTCurrentDashHitStartCount = GetCurrentAttackHitCount();
+            if (!PlayAttackStage(BossAttackType::DashAttack, 2))
+                return DashBTResult::Failed;
+            dashBTPhase = DashBTPhase::Knockup;
+            return DashBTResult::Running;
+        }
+    case DashBTPhase::Knockup:
+        if (GetCurrentAttackHitCount() > dashBTCurrentDashHitStartCount ||
+            WasCurrentAttackSequenceJustDodged())
+        {
+            dashBTAbortRemainingDashes = true;
+        }
+        if (controller->IsPlayAnimation())
+            return DashBTResult::Running;
+        if (!dashBTAbortRemainingDashes && dashBTDashIndex + 1 < dashBTDashMaxCount)
+        {
+            StopDashAttackMovement();
+            DisableAttackHitBoxes();
+            dashBTPhase = DashBTPhase::InterDashTransition;
+            dashBTTransitionElapsed = 0.0f;
+            dashBTDirectionLocked = false;
+            dashBTMovementSnapshotPrepared = false;
+            dashBTDirectionLockRequested = false;
+            dashBTDashStartRequested = false;
+            return DashBTResult::Running;
+        }
+        FinishDashAttackBT();
+        return DashBTResult::Complete;
+    case DashBTPhase::InterDashTransition:
+        {
+            StopDashAttackMovement();
+            DisableAttackHitBoxes();
+            const auto context = BuildTargetContext();
+            if (!context.valid)
+                return DashBTResult::Failed;
+            const float transitionDuration = (std::max)(0.0f, dashBTTransitionDuration);
+            const float trackingDuration = std::clamp(dashBTInterDashTrackingDuration,
+                                                      0.0f, transitionDuration);
+            if (!dashBTDirectionLocked && dashBTTransitionElapsed < trackingDuration)
+                RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt);
+            dashBTTransitionElapsed += dt;
+            if (!dashBTDirectionLocked && dashBTTransitionElapsed >= trackingDuration)
+            {
+                if (!PrepareDashAttackMovementSnapshot())
+                    return DashBTResult::Failed;
+                dashBTDirectionLocked = true;
+                BeginDashTelegraphVisual();
+            }
+            if (dashBTTransitionElapsed < transitionDuration)
+                return DashBTResult::Running;
 
-		++dashBTDashIndex;
-		BeginAdditionalAttackStage();
-		DisableAttackHitBoxes();
-		if (!PlayAttackStage(BossAttackType::DashAttack, 1))
-			return DashBTResult::Failed;
-		BeginDashTelegraphLineShrink();
-		dashBTCurrentDashHitStartCount = GetCurrentAttackHitCount();
-		dashBTPhase = DashBTPhase::Movement;
-		return DashBTResult::Running;
-	}
-	default:
-		return DashBTResult::Failed;
-	}
-}
-
-void GruxEnemy::FinishDashAttackBT()
-{
-	CleanupDashAttackBT();
-	dashBTPhase = DashBTPhase::Recovery;
+            ++dashBTDashIndex;
+            BeginAdditionalAttackStage();
+            DisableAttackHitBoxes();
+            if (!PlayAttackStage(BossAttackType::DashAttack, 1))
+                return DashBTResult::Failed;
+            BeginDashTelegraphLineShrink();
+            dashBTCurrentDashHitStartCount = GetCurrentAttackHitCount();
+            dashBTPhase = DashBTPhase::Movement;
+            return DashBTResult::Running;
+        }
+    default:
+        return DashBTResult::Failed;
+    }
 }
 
 void GruxEnemy::CleanupDashAttackBT()
 {
-	// Dash固有のRuntime、演出、当たり判定を後始末する。
-	HideDashTelegraphVisual();
-	if (!IsDashAttackBTActive())
-		return;
-	if (dashBTAttackStarted)
-	{
-		StartSelectedActionCooldown();
-		dashBTAttackStarted = false;
-	}
-	StopDashAttackMovement();
-	ClearAttackSetupTarget();
-	const bool externallyInterrupted = IsDead() || IsDeathPresentationActive() || IsStunned();
-	if (!externallyInterrupted)
-		EndPositioningAnimation();
-	DisableAttackHitBoxes();
-	dashBTPhase = DashBTPhase::None;
-	dashBTDashIndex = 0;
-	dashBTDashMaxCount = 1;
-	dashBTCurrentDashHitStartCount = 0;
-	dashBTAbortRemainingDashes = false;
-	dashBTTransitionElapsed = 0.0f;
-	dashBTDirectionLocked = false;
-	dashBTMovementSnapshotPrepared = false;
-	dashBTDirectionLockRequested = false;
-	dashBTDashStartRequested = false;
-	dashBTPredictedKnockupPosition = {};
-	dashAttackDirection = {};
-	dashAttackStartPosition = {};
-	dashTargetPosition = {};
-	calculatedDashAttackDistance = 0.0f;
-	selectedActionType = dashBTPreviousAction;
+    // Dash固有のRuntime、演出、当たり判定を後始末する。
+    HideDashTelegraphVisual();
+    if (!IsDashAttackBTActive())
+        return;
+    if (dashBTAttackStarted)
+    {
+        StartSelectedActionCooldown();
+        dashBTAttackStarted = false;
+    }
+    StopDashAttackMovement();
+    ClearAttackSetupTarget();
+    const bool externallyInterrupted = IsDead() || IsDeathPresentationActive() || IsStunned();
+    if (!externallyInterrupted)
+        EndPositioningAnimation();
+    DisableAttackHitBoxes();
+    dashBTPhase = DashBTPhase::None;
+    dashBTDashIndex = 0;
+    dashBTDashMaxCount = 1;
+    dashBTCurrentDashHitStartCount = 0;
+    dashBTAbortRemainingDashes = false;
+    dashBTTransitionElapsed = 0.0f;
+    dashBTDirectionLocked = false;
+    dashBTMovementSnapshotPrepared = false;
+    dashBTDirectionLockRequested = false;
+    dashBTDashStartRequested = false;
+    dashBTPredictedKnockupPosition = {};
+    dashAttackDirection = {};
+    dashAttackStartPosition = {};
+    dashTargetPosition = {};
+    calculatedDashAttackDistance = 0.0f;
+    selectedActionType = dashBTPreviousAction;
+}
+
+void GruxEnemy::FinishDashAttackBT()
+{
+    CleanupDashAttackBT();
+    dashBTPhase = DashBTPhase::Recovery;
 }

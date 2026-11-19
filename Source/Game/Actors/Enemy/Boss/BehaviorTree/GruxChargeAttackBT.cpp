@@ -26,14 +26,17 @@ bool CanPlanChargeAttack::Judgment()
     const bool ready = owner->CanPlanChargeAttack();
     return ready;
 }
+
 ActionBase::State PrepareChargeSetupTarget::Run(float)
 {
     return owner->PrepareChargeAttackSetupTarget() ? State::Complete : State::Failed;
 }
+
 ActionBase::State FaceChargePlayerIfNeeded::Run(float dt)
 {
     return ToActionState(owner->UpdateChargeAttackFacingBT(dt));
 }
+
 ActionBase::State CanExecuteChargeAttack::Run(float)
 {
     const bool ready = owner->CanExecuteChargeAttack();
@@ -46,14 +49,17 @@ ActionBase::State StartChargeAttack::Run(float)
     owner->StartChargeAttackBT();
     return owner->IsChargeAttackBTActive() ? State::Complete : State::Failed;
 }
+
 ActionBase::State ExecuteChargeAttack::Run(float dt)
 {
     return ToActionState(owner->UpdateChargeAttackBT(dt));
 }
+
 ActionBase::State ResolveChargeResult::Run(float dt)
 {
     return ToActionState(owner->ResolveChargeResultBT(dt));
 }
+
 ActionBase::State ExecuteChargeRecovery::Run(float dt)
 {
     if (!owner->IsChargeAttackBTActive())
@@ -63,7 +69,7 @@ ActionBase::State ExecuteChargeRecovery::Run(float dt)
     }
     if (owner->GetChargeBTPhase() == GruxEnemy::ChargeBTPhase::RecoveryPending)
     {
-        timerAction.Reset(); 
+        timerAction.Reset();
         owner->BeginChargeRecoveryBT();
     }
     if (owner->GetChargeBTPhase() == GruxEnemy::ChargeBTPhase::Recovery)
@@ -75,14 +81,6 @@ ActionBase::State ExecuteChargeRecovery::Run(float dt)
     return ToActionState(owner->FinishChargeRecoveryBT());
 }
 
-// Charge実行条件・準備
-bool GruxEnemy::IsChargeBTExecutionAllowed() const
-{
-    if (IsDead() || !battleAIActive || IsDeathPresentationActive() ||
-        IsAnimationEditorPreviewActive())
-        return false;
-    return true;
-}
 bool GruxEnemy::CanPlanChargeAttack() const
 {
     if (!IsChargeBTExecutionAllowed() || !BuildTargetContext().valid ||
@@ -123,8 +121,8 @@ bool GruxEnemy::PrepareChargeAttackSetupTarget()
     const float chargeSetupBoundaryMargin = (std::max)(
         bossRoomSafetyMargin, chargeCastRadius + chargeWallCastSafetyMargin + chargeSetupExtraClearance);
     if (!FindAttackSetupTarget(chargeSetupDistanceMin, chargeSetupDistanceMax,
-        attackSetupCandidateAngleStep, attackSetupClampTolerance, chargeSetupMinimumMoveDistance,
-        target, chargeSetupBoundaryMargin))
+                               attackSetupCandidateAngleStep, attackSetupClampTolerance, chargeSetupMinimumMoveDistance,
+                               target, chargeSetupBoundaryMargin))
     {
         CleanupChargeAttackBT();
         return false;
@@ -137,7 +135,7 @@ bool GruxEnemy::PrepareChargeAttackSetupTarget()
     attackSetupTarget = {};
     attackSetupTarget.valid = true;
     attackSetupTarget.targetPosition = target;
-    attackSetupTarget.stuckMovementThreshold = 0.01f; 
+    attackSetupTarget.stuckMovementThreshold = 0.01f;
     return true;
 }
 
@@ -155,7 +153,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateChargeAttackFacingBT(float dt)
     }
     if (context.absoluteAngleDegrees <= GetTurnCompleteAngle())
         return ChargeBTStepResult::Complete;
-    chargeBT.facingElapsed +=  dt;
+    chargeBT.facingElapsed += dt;
     if (chargeBT.facingElapsed >= turnTimeout)
     {
         FailChargeAttackBT();
@@ -174,19 +172,6 @@ bool GruxEnemy::CanExecuteChargeAttack() const
         characterMovementComponent && rotationComponent && GetBodyAnimationController();
 }
 
-// Charge開始・失敗処理
-void GruxEnemy::FailChargeAttackBT()
-{
-    if (!IsChargeAttackBTActive()) return;
-    HideChargeTelegraphVisual();
-    StopChargeAttackMovement();
-    DisableAttackHitBoxes();
-    ClearAttackSetupTarget();
-    chargeBT.failed = true;
-    chargeBT.result = ChargeAttackEndReason::None; 
-    chargeBT.phase = ChargeBTPhase::Result;
-}
-
 void GruxEnemy::StartChargeAttackBT()
 {
     if (chargeBT.phase == ChargeBTPhase::Result) return;
@@ -199,11 +184,10 @@ void GruxEnemy::StartChargeAttackBT()
     }
     StopAttackSetupMovement();
     ClearAttackSetupTarget();
-    StartAttack(); 
+    StartAttack();
     chargeBT.attackStarted = true;
     chargeBT.phase2SettingsLatched = IsPhase2ChargeActive();
-    chargeBT.triplePhase = chargeBT.phase2SettingsLatched
-        ? TripleChargePhase::InitialWindup : TripleChargePhase::None;
+    chargeBT.triplePhase = chargeBT.phase2SettingsLatched ? TripleChargePhase::InitialWindup : TripleChargePhase::None;
     chargeBT.tripleChargeIndex = 0;
     chargeBT.tripleChargeTransitionElapsed = 0.0f;
     chargeBT.tripleChargeLegElapsed = 0.0f;
@@ -219,6 +203,98 @@ void GruxEnemy::StartChargeAttackBT()
     OnSelectedActionStartedSuccessfully();
 }
 
+// Charge更新・Triple Charge
+GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateChargeAttackBT(float dt)
+{
+    return chargeBT.phase2SettingsLatched ? UpdateTripleChargeBT(dt) : UpdateSingleChargeBT(dt);
+}
+
+GruxEnemy::ChargeBTStepResult GruxEnemy::ResolveChargeResultBT(float dt)
+{
+    if (!IsChargeAttackBTActive()) return ChargeBTStepResult::Failed;
+    if (chargeBT.phase == ChargeBTPhase::Stun)
+    {
+        const auto status = UpdateChargeStunBT(dt);
+        if (status == ChargeBTStepResult::Running) return status;
+        if (status == ChargeBTStepResult::Failed) chargeBT.failed = true;
+        chargeBT.stunPhase = ChargeBTStunPhase::None;
+        const float recoveryDuration = status == ChargeBTStepResult::Complete
+                                           ? GetPostStunRecoveryDuration() : GetRecoveryDurationForCurrentAttack();
+        SetNextRecoveryDuration(recoveryDuration);
+    }
+    else if (chargeBT.phase == ChargeBTPhase::Result)
+    {
+        if (!chargeBT.failed && chargeBT.result == ChargeAttackEndReason::WallHit)
+        {
+            if (BeginChargeStunBT()) return ChargeBTStepResult::Running;
+            chargeBT.failed = true;
+        }
+        float recoveryDuration = GetRecoveryDurationForCurrentAttack();
+        if (!chargeBT.failed && chargeBT.result == ChargeAttackEndReason::PlayerHit)
+        {
+            recoveryDuration = GetChargePlayerHitRecoveryDuration();
+        }
+        SetNextRecoveryDuration(recoveryDuration);
+    }
+    else return ChargeBTStepResult::Failed;
+    FinishChargeAttackBT();
+    chargeBT.phase = ChargeBTPhase::RecoveryPending;
+    return ChargeBTStepResult::Complete;
+}
+
+// Charge開始・失敗処理
+void GruxEnemy::FailChargeAttackBT()
+{
+    if (!IsChargeAttackBTActive()) return;
+    HideChargeTelegraphVisual();
+    StopChargeAttackMovement();
+    DisableAttackHitBoxes();
+    ClearAttackSetupTarget();
+    chargeBT.failed = true;
+    chargeBT.result = ChargeAttackEndReason::None;
+    chargeBT.phase = ChargeBTPhase::Result;
+}
+
+GruxEnemy::ChargeBTStepResult GruxEnemy::FinishChargeRecoveryBT()
+{
+    if (chargeBT.phase != ChargeBTPhase::RecoveryPostconditions) return ChargeBTStepResult::Failed;
+    CleanupChargeAttackBT();
+    return ChargeBTStepResult::Complete;
+}
+
+// Rush中断・Cleanup
+void GruxEnemy::NotifyPlayerRushStarted(const Player* player)
+{
+    if (!player || !IsChargeAttackBTActive())
+        return;
+
+    rushCombatHoldActive = true;
+    interruptedChargeRecoveryPending = true;
+    interruptedChargeRecoveryActive = false;
+    interruptedChargeRecoveryTimer = 0.0f;
+    interruptedChargeRecoveryDuration = GetChargeJustDodgeRecoveryDuration();
+
+    CleanupChargeAttackBT();
+    PlayBodyAnimation("Stun_Idle", true, true, 0.15f, true);
+    ResetBehaviorTreeRuntime();
+    behaviorTreePreviousNode = "None";
+}
+
+void GruxEnemy::NotifyPlayerRushEnded(const Player* player)
+{
+    if (!player)
+        return;
+
+    rushCombatHoldActive = false;
+    if (interruptedChargeRecoveryPending)
+    {
+        interruptedChargeRecoveryPending = false;
+        PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
+        interruptedChargeRecoveryActive = true;
+        interruptedChargeRecoveryTimer = 0.0f;
+    }
+}
+
 // Single Charge開始
 bool GruxEnemy::BeginSingleChargeBT()
 {
@@ -229,184 +305,69 @@ bool GruxEnemy::BeginSingleChargeBT()
     return true;
 }
 
-// Triple Charge判定・開始
-bool GruxEnemy::IsPhase2ChargeActive()
+GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateSingleChargeBT(float dt)
 {
-    const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
-    return scene && scene->IsBossInFinalPhase();
-}
-
-bool GruxEnemy::BeginTripleChargeLeg()
-{
-    justDodgedActors.clear();
-    hitActors.clear();
-    HideChargeTelegraphVisual();
-    const bool movementStarted = BeginChargeAttackMovement();
-    if (!movementStarted)
-        return false;
-    chargeBT.result = ChargeAttackEndReason::None;
-    const int index = std::clamp(chargeBT.tripleChargeIndex, 0, 2);
-    chargeBT.tripleChargeStartPositions[index] = GetPosition();
-    chargeBT.tripleChargeLegElapsed = 0.0f;
-    chargeBT.triplePhase = TripleChargePhase::Charging;
-    chargeBT.phase = ChargeBTPhase::Charging;
-    return true;
-}
-
-bool GruxEnemy::BeginTripleChargeTransition()
-{
-    if (chargeBT.tripleChargeIndex > 2)
-        return false;
-    StopChargeAttackMovement();
-    PlayBodyAnimation("TravelMode_Idle_0",true,true,0.15f,true);
-    chargeBT.triplePhase = TripleChargePhase::InterChargeTransition;
-    chargeBT.tripleChargeTransitionElapsed = 0.0f;
-    chargeBT.tripleChargeRepositionActive = false;
-    chargeBT.tripleChargeRepositionTargetPosition = GetPosition();
-    return true;
-}
-
-// Charge予兆描画
-void GruxEnemy::HideChargeTelegraphVisual()
-{
-    if (chargeTelegraphMeshComponent)
-        chargeTelegraphMeshComponent->SetIsVisible(false);
-    chargeBT.tripleChargeTelegraphVisible = false;
-}
-
-bool GruxEnemy::BeginChargeTelegraphVisual()
-{
-
-    const DirectX::XMFLOAT3 direction = chargeDirection;
-    const float directionLength = std::sqrt(direction.x * direction.x + direction.z * direction.z);
-    if (directionLength <= FLT_EPSILON)
-        return false;
-
-    const DirectX::XMFLOAT3 normalizedDirection{
-        direction.x / directionLength, 0.0f, direction.z / directionLength };
-    const float wallRadius = (std::max)(0.05f, radius * chargeWallCastRadiusScale);
-    const float playerRadius = (std::max)(0.05f, radius * GetActiveChargePlayerCastRadiusScale());
-    const float castDistance = (std::max)(0.1f, tripleChargeTelegraphMaxDistance);
-    const DirectX::XMFLOAT3 startPosition{
-        GetPosition().x + normalizedDirection.x * tripleChargeTelegraphForwardOffset,
-        tripleChargeTelegraphFixedWorldY,
-        GetPosition().z + normalizedDirection.z * tripleChargeTelegraphForwardOffset };
-    DirectX::XMFLOAT3 castOrigin = GetPosition();
-    castOrigin.x = startPosition.x;
-    castOrigin.z = startPosition.z;
-    castOrigin.y += (std::max)((std::max)(playerRadius, wallRadius) + 0.05f, height * 0.5f);
-
-    const uint32_t telegraphWallMask = CollisionHelper::ToBit(CollisionLayer::WorldStatic);
-    HitResultWithActor wallHit{};
-    const bool rawWallHit = Physics::Instance().SphereCast(
-        castOrigin, normalizedDirection, castDistance, wallRadius, wallHit, telegraphWallMask);
-
-    const float worldStaticDistance = rawWallHit ? (std::max)(0.0f, wallHit.distance) : 0.0f;
-    const float boundaryDistance = [&]()
+    if (!IsChargeAttackBTActive()) return ChargeBTStepResult::Failed;
+    if (chargeBT.phase == ChargeBTPhase::Result) return ChargeBTStepResult::Complete;
+    const auto controller = GetBodyAnimationController();
+    if (!controller || !characterMovementComponent || !rotationComponent)
     {
-        constexpr float epsilon = 1.0e-5f;
-        float result = FLT_MAX;
-        const auto consider = [&result](const float distance)
+        FailChargeAttackBT();
+        return ChargeBTStepResult::Complete;
+    }
+    if (chargeBT.phase == ChargeBTPhase::Telegraph)
+    {
+        const auto context = BuildTargetContext();
+        if (!context.valid || controller->GetCurrentAnimationName() != "Pre_FootSlide_0")
         {
-            if (distance >= 0.0f && distance < result)
-                result = distance;
-        };
-        if (normalizedDirection.x > epsilon)
-            consider((bossRoomMaxX - startPosition.x) / normalizedDirection.x);
-        else if (normalizedDirection.x < -epsilon)
-            consider((bossRoomMinX - startPosition.x) / normalizedDirection.x);
-        if (normalizedDirection.z > epsilon)
-            consider((bossRoomMaxZ - startPosition.z) / normalizedDirection.z);
-        else if (normalizedDirection.z < -epsilon)
-            consider((bossRoomMinZ - startPosition.z) / normalizedDirection.z);
-        return result == FLT_MAX ? 0.0f : result;
-    }();
-
-    float telegraphLength = castDistance;
-    if (rawWallHit)
-    {
-        telegraphLength = worldStaticDistance;
+            FailChargeAttackBT();
+            return ChargeBTStepResult::Complete;
+        }
+        const float animationTime = controller->GetCurrentAnimationTime();
+        if (animationTime < chargeDirectionLockTime)
+            RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt);
+        else if (!chargeDirectionLocked)
+        {
+            if (!LockChargeDirectionToPlayer() || !BeginChargeTelegraphVisual())
+            {
+                FailChargeAttackBT();
+                return ChargeBTStepResult::Complete;
+            }
+            chargeBT.tripleChargeTelegraphElapsed = 0.0f;
+        }
+        if (chargeDirectionLocked && chargeBT.tripleChargeTelegraphVisible)
+        {
+            chargeBT.tripleChargeTelegraphElapsed = (std::max)(
+                0.0f, animationTime - chargeDirectionLockTime);
+            const float expandDuration = (std::max)(0.001f, tripleChargeTelegraphExpandDuration);
+            const float expandProgress = std::clamp(
+                chargeBT.tripleChargeTelegraphElapsed / expandDuration, 0.0f, 1.0f);
+            UpdateChargeTelegraphVisual(expandProgress);
+        }
+        if (animationTime >= GetChargeWindupEndTime())
+        {
+            HideChargeTelegraphVisual();
+            if (!BeginSingleChargeBT()) FailChargeAttackBT();
+            return chargeBT.failed ? ChargeBTStepResult::Complete : ChargeBTStepResult::Running;
+        }
+        if (!controller->IsPlayAnimation() || !UpdateChargeAnimationWatchdogBT(animationTime, dt))
+        {
+            FailChargeAttackBT();
+            return ChargeBTStepResult::Complete;
+        }
+        return ChargeBTStepResult::Running;
     }
-    else if (boundaryDistance > 0.0f)
+    if (chargeBT.phase != ChargeBTPhase::Charging) return ChargeBTStepResult::Failed;
+    if (controller->GetCurrentAnimationName() != "Stampede_0")
     {
-        telegraphLength = boundaryDistance;
+        FailChargeAttackBT();
+        return ChargeBTStepResult::Complete;
     }
-    else
-    {
-    }
-    telegraphLength = (std::max)(0.1f, telegraphLength);
-
-    const float telegraphWidth = playerRadius * 2.0f;
-    chargeBT.tripleChargeTelegraphDirection = normalizedDirection;
-    chargeBT.tripleChargeTelegraphStartPosition = startPosition;
-    chargeBT.tripleChargeTelegraphLength = telegraphLength;
-    chargeBT.tripleChargeTelegraphWidth = telegraphWidth;
-    chargeBT.tripleChargeTelegraphVisible =chargeTelegraphMeshComponent != nullptr;
-
-    if (chargeTelegraphMeshComponent)
-    {
-        const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
-        const DirectX::XMFLOAT3& phaseColor = scene && scene->IsBossInFinalPhase()
-            ? tripleChargeTelegraphPhase2EmissiveColor : tripleChargeTelegraphPhase1EmissiveColor;
-        chargeTelegraphMeshComponent->plusAlphaCBuffer->data.cpuColor = {
-            phaseColor.x, phaseColor.y, phaseColor.z, 1.0f };
-        chargeTelegraphMeshComponent->plusAlphaCBuffer->data.emissionPower =
-            tripleChargeTelegraphEmissiveEnabled
-            ? (std::max)(0.0f, tripleChargeTelegraphEmissiveIntensity) : 0.0f;
-        chargeTelegraphMeshComponent->SetWorldLocationDirect(startPosition);
-        const float yaw = std::atan2(-normalizedDirection.x, -normalizedDirection.z);
-        const auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yaw, 0.0f);
-        DirectX::XMFLOAT4 rotationFloat{};
-        DirectX::XMStoreFloat4(&rotationFloat, rotation);
-        const DirectX::XMFLOAT3 rootScale = GetScale();
-        const DirectX::XMFLOAT3 requestedScale{
-            telegraphWidth / (std::abs(rootScale.x) > 0.001f ? rootScale.x : 1.0f),
-            1.0f,
-            telegraphLength / (std::abs(rootScale.z) > 0.001f ? rootScale.z : 1.0f) };
-        chargeTelegraphMeshComponent->SetWorldRotationDirect(rotationFloat);
-        chargeTelegraphMeshComponent->SetRelativeScaleDirect(requestedScale);
-        chargeTelegraphMeshComponent->UpdateComponentToWorld();
-
-        chargeTelegraphMeshComponent->SetIsVisible(chargeBT.tripleChargeTelegraphVisible);
-        if (chargeBT.tripleChargeTelegraphVisible)
-            PlayBossTelegraphSE("boss_charge_telegraph.wav");
-    }
-    UpdateChargeTelegraphVisual(0.0f);
-    return true;
-}
-
-void GruxEnemy::UpdateChargeTelegraphVisual(float lengthProgress)
-{
-    if (!chargeTelegraphMeshComponent)
-        return;
-    const float progress = std::clamp(lengthProgress, 0.0f, 1.0f);
-    const DirectX::XMFLOAT3 direction = chargeBT.tripleChargeTelegraphDirection;
-    const float directionLength = std::sqrt(direction.x * direction.x + direction.z * direction.z);
-    if (directionLength <= FLT_EPSILON)
-        return;
-    const float yaw = std::atan2(-direction.x, -direction.z);
-    const auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yaw, 0.0f);
-    DirectX::XMFLOAT4 rotationFloat{};
-    DirectX::XMStoreFloat4(&rotationFloat, rotation);
-    const DirectX::XMFLOAT3 rootScale = GetScale();
-    const float width = chargeBT.tripleChargeTelegraphWidth;
-    const float length = chargeBT.tripleChargeTelegraphLength * progress;
-    const DirectX::XMFLOAT3 requestedScale{
-        width / (std::abs(rootScale.x) > 0.001f ? rootScale.x : 1.0f),
-        1.0f,
-        length / (std::abs(rootScale.z) > 0.001f ? rootScale.z : 1.0f) };
-    chargeTelegraphMeshComponent->SetWorldLocationDirect(
-        chargeBT.tripleChargeTelegraphStartPosition);
-    chargeTelegraphMeshComponent->SetWorldRotationDirect(rotationFloat);
-    chargeTelegraphMeshComponent->SetRelativeScaleDirect(requestedScale);
-    chargeTelegraphMeshComponent->UpdateComponentToWorld();
-}
-
-
-// Charge更新・Triple Charge
-GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateChargeAttackBT(float dt)
-{
-    return chargeBT.phase2SettingsLatched ? UpdateTripleChargeBT(dt) : UpdateSingleChargeBT(dt);
+    chargeBT.result = UpdateChargeAttackMovement(dt);
+    if (chargeBT.result == ChargeAttackEndReason::None) return ChargeBTStepResult::Running;
+    DisableAttackHitBoxes();
+    chargeBT.phase = ChargeBTPhase::Result;
+    return ChargeBTStepResult::Complete;
 }
 
 GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
@@ -499,14 +460,14 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
             DirectX::XMFLOAT3 sideNormal{};
             bool sideWallHit = false;
             EvaluateChargeSideClearance(currentPosition, nextDirection,
-                sideClearance, sideNormal, sideWallHit);
+                                        sideClearance, sideNormal, sideWallHit);
             const float repositionShortage = wallHit
-                ? (std::max)(0.0f, requiredClearance - clearance) : 0.0f;
+                                                 ? (std::max)(0.0f, requiredClearance - clearance) : 0.0f;
             const float requiredSideClearance = (std::max)(0.05f,
-                radius * chargeWallCastRadiusScale) + chargeWallCastSafetyMargin +
+                                                           radius * chargeWallCastRadiusScale) + chargeWallCastSafetyMargin +
                 tripleChargeRepositionSideSafetyMargin;
             const float sideShortage = sideWallHit
-                ? (std::max)(0.0f, requiredSideClearance - sideClearance) : 0.0f;
+                                           ? (std::max)(0.0f, requiredSideClearance - sideClearance) : 0.0f;
 
             // 補正中でなければ、不足分から補正先を計画する。
             if (clearanceMeasured && !chargeBT.tripleChargeRepositionActive &&
@@ -518,30 +479,30 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
                     (bossRoomMinZ + bossRoomMaxZ) * 0.5f };
                 const float toCenterX = roomCenter.x - currentPosition.x;
                 const float toCenterZ = roomCenter.z - currentPosition.z;
-                if (inwardNormal.x * toCenterX + inwardNormal.z * toCenterZ < 0.0f)
+                if (inwardNormal.x* toCenterX + inwardNormal.z * toCenterZ < 0.0f)
                 {
                     inwardNormal.x = -inwardNormal.x;
                     inwardNormal.z = -inwardNormal.z;
                 }
                 DirectX::XMFLOAT3 correction{
                     -nextDirection.x * repositionShortage +
-                        inwardNormal.x * sideShortage,
+                    inwardNormal.x * sideShortage,
                     0.0f,
                     -nextDirection.z * repositionShortage +
-                        inwardNormal.z * sideShortage };
+                    inwardNormal.z * sideShortage };
                 const float correctionLength = std::sqrt(
                     correction.x * correction.x + correction.z * correction.z);
                 const float plannedDistance = (std::min)(correctionLength,
-                    tripleChargeRepositionMaxDistance);
+                                                         tripleChargeRepositionMaxDistance);
                 const float wallRadius = (std::max)(0.05f,
-                    radius * chargeWallCastRadiusScale);
+                                                    radius * chargeWallCastRadiusScale);
                 const float boundaryMargin = (std::max)(
                     bossRoomSafetyMargin,
                     wallRadius + chargeWallCastSafetyMargin);
                 chargeBT.tripleChargeRepositionActive = plannedDistance > 0.0001f;
                 const DirectX::XMFLOAT3 repositionDirection = correctionLength > 0.0001f
-                    ? DirectX::XMFLOAT3{ correction.x / correctionLength, 0.0f, correction.z / correctionLength }
-                    : DirectX::XMFLOAT3{};
+                                                                  ? DirectX::XMFLOAT3{ correction.x / correctionLength, 0.0f, correction.z / correctionLength }
+                                                                  : DirectX::XMFLOAT3{};
                 chargeBT.tripleChargeRepositionTargetPosition = currentPosition;
                 chargeBT.tripleChargeRepositionTargetPosition.x +=
                     repositionDirection.x * plannedDistance;
@@ -578,7 +539,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
                 DirectX::XMFLOAT3 bossRoomResolvedMove{};
                 bool bossRoomPathBlocked = false;
                 if (ResolveBossRoomPositioningMove(beforeMove, moved, bossRoomResolvedMove,
-                    bossRoomPathBlocked))
+                                                   bossRoomPathBlocked))
                 {
                     moved = bossRoomResolvedMove;
                     if (bossRoomPathBlocked)
@@ -698,98 +659,193 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
     return ChargeBTStepResult::Complete;
 }
 
-// アニメーション監視・Single Charge更新
-bool GruxEnemy::UpdateChargeAnimationWatchdogBT(float animationTime, float dt)
+
+// Triple Charge判定・開始
+bool GruxEnemy::IsPhase2ChargeActive() const
 {
-    const float safeDt = (std::max)(0.0f, dt);
-    chargeBT.animationElapsed += safeDt;
-    if (animationTime > chargeBT.previousAnimationTime + 0.00001f)
-        chargeBT.animationStalled = 0.0f;
+    const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
+    return scene && scene->IsBossInFinalPhase();
+}
+
+bool GruxEnemy::BeginTripleChargeLeg()
+{
+    justDodgedActors.clear();
+    hitActors.clear();
+    HideChargeTelegraphVisual();
+    const bool movementStarted = BeginChargeAttackMovement();
+    if (!movementStarted)
+        return false;
+    chargeBT.result = ChargeAttackEndReason::None;
+    const int index = std::clamp(chargeBT.tripleChargeIndex, 0, 2);
+    chargeBT.tripleChargeStartPositions[index] = GetPosition();
+    chargeBT.tripleChargeLegElapsed = 0.0f;
+    chargeBT.triplePhase = TripleChargePhase::Charging;
+    chargeBT.phase = ChargeBTPhase::Charging;
+    return true;
+}
+
+bool GruxEnemy::BeginTripleChargeTransition()
+{
+    if (chargeBT.tripleChargeIndex > 2)
+        return false;
+    StopChargeAttackMovement();
+    PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
+    chargeBT.triplePhase = TripleChargePhase::InterChargeTransition;
+    chargeBT.tripleChargeTransitionElapsed = 0.0f;
+    chargeBT.tripleChargeRepositionActive = false;
+    chargeBT.tripleChargeRepositionTargetPosition = GetPosition();
+    return true;
+}
+
+bool GruxEnemy::BeginChargeTelegraphVisual()
+{
+
+    const DirectX::XMFLOAT3 direction = chargeDirection;
+    const float directionLength = std::sqrt(direction.x * direction.x + direction.z * direction.z);
+    if (directionLength <= FLT_EPSILON)
+        return false;
+
+    const DirectX::XMFLOAT3 normalizedDirection{
+        direction.x / directionLength, 0.0f, direction.z / directionLength };
+    const float wallRadius = (std::max)(0.05f, radius * chargeWallCastRadiusScale);
+    const float playerRadius = (std::max)(0.05f, radius * GetActiveChargePlayerCastRadiusScale());
+    const float castDistance = (std::max)(0.1f, tripleChargeTelegraphMaxDistance);
+    const DirectX::XMFLOAT3 startPosition{
+        GetPosition().x + normalizedDirection.x * tripleChargeTelegraphForwardOffset,
+        tripleChargeTelegraphFixedWorldY,
+        GetPosition().z + normalizedDirection.z * tripleChargeTelegraphForwardOffset };
+    DirectX::XMFLOAT3 castOrigin = GetPosition();
+    castOrigin.x = startPosition.x;
+    castOrigin.z = startPosition.z;
+    castOrigin.y += (std::max)((std::max)(playerRadius, wallRadius) + 0.05f, height * 0.5f);
+
+    const uint32_t telegraphWallMask = CollisionHelper::ToBit(CollisionLayer::WorldStatic);
+    HitResultWithActor wallHit{};
+    const bool rawWallHit = Physics::Instance().SphereCast(
+        castOrigin, normalizedDirection, castDistance, wallRadius, wallHit, telegraphWallMask);
+
+    const float worldStaticDistance = rawWallHit ? (std::max)(0.0f, wallHit.distance) : 0.0f;
+    const float boundaryDistance = [&]()
+    {
+        constexpr float epsilon = 1.0e-5f;
+        float result = FLT_MAX;
+        const auto consider = [&result](const float distance)
+        {
+            if (distance >= 0.0f && distance < result)
+                result = distance;
+        };
+        if (normalizedDirection.x > epsilon)
+            consider((bossRoomMaxX - startPosition.x) / normalizedDirection.x);
+        else if (normalizedDirection.x < -epsilon)
+            consider((bossRoomMinX - startPosition.x) / normalizedDirection.x);
+        if (normalizedDirection.z > epsilon)
+            consider((bossRoomMaxZ - startPosition.z) / normalizedDirection.z);
+        else if (normalizedDirection.z < -epsilon)
+            consider((bossRoomMinZ - startPosition.z) / normalizedDirection.z);
+        return result == FLT_MAX ? 0.0f : result;
+    }();
+
+    float telegraphLength = castDistance;
+    if (rawWallHit)
+    {
+        telegraphLength = worldStaticDistance;
+    }
+    else if (boundaryDistance > 0.0f)
+    {
+        telegraphLength = boundaryDistance;
+    }
     else
-        chargeBT.animationStalled += safeDt;
-    chargeBT.previousAnimationTime = animationTime;
-    return chargeBT.animationStalled < 1.0f && chargeBT.animationElapsed < 10.0f;
+    {
+    }
+    telegraphLength = (std::max)(0.1f, telegraphLength);
+
+    const float telegraphWidth = playerRadius * 2.0f;
+    chargeBT.tripleChargeTelegraphDirection = normalizedDirection;
+    chargeBT.tripleChargeTelegraphStartPosition = startPosition;
+    chargeBT.tripleChargeTelegraphLength = telegraphLength;
+    chargeBT.tripleChargeTelegraphWidth = telegraphWidth;
+    chargeBT.tripleChargeTelegraphVisible = chargeTelegraphMeshComponent != nullptr;
+
+    if (chargeTelegraphMeshComponent)
+    {
+        const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
+        const DirectX::XMFLOAT3& phaseColor = scene && scene->IsBossInFinalPhase()
+                                                  ? tripleChargeTelegraphPhase2EmissiveColor : tripleChargeTelegraphPhase1EmissiveColor;
+        chargeTelegraphMeshComponent->plusAlphaCBuffer->data.cpuColor = {
+            phaseColor.x, phaseColor.y, phaseColor.z, 1.0f };
+        chargeTelegraphMeshComponent->plusAlphaCBuffer->data.emissionPower =
+            tripleChargeTelegraphEmissiveEnabled
+                ? (std::max)(0.0f, tripleChargeTelegraphEmissiveIntensity) : 0.0f;
+        chargeTelegraphMeshComponent->SetWorldLocationDirect(startPosition);
+        const float yaw = std::atan2(-normalizedDirection.x, -normalizedDirection.z);
+        const auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yaw, 0.0f);
+        DirectX::XMFLOAT4 rotationFloat{};
+        DirectX::XMStoreFloat4(&rotationFloat, rotation);
+        const DirectX::XMFLOAT3 rootScale = GetScale();
+        const DirectX::XMFLOAT3 requestedScale{
+            telegraphWidth / (std::abs(rootScale.x) > 0.001f ? rootScale.x : 1.0f),
+            1.0f,
+            telegraphLength / (std::abs(rootScale.z) > 0.001f ? rootScale.z : 1.0f) };
+        chargeTelegraphMeshComponent->SetWorldRotationDirect(rotationFloat);
+        chargeTelegraphMeshComponent->SetRelativeScaleDirect(requestedScale);
+        chargeTelegraphMeshComponent->UpdateComponentToWorld();
+
+        chargeTelegraphMeshComponent->SetIsVisible(chargeBT.tripleChargeTelegraphVisible);
+        if (chargeBT.tripleChargeTelegraphVisible)
+            PlayBossTelegraphSE("boss_charge_telegraph.wav");
+    }
+    UpdateChargeTelegraphVisual(0.0f);
+    return true;
 }
 
-GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateSingleChargeBT(float dt)
+void GruxEnemy::UpdateChargeTelegraphVisual(float lengthProgress) const
 {
-    if (!IsChargeAttackBTActive()) return ChargeBTStepResult::Failed;
-    if (chargeBT.phase == ChargeBTPhase::Result) return ChargeBTStepResult::Complete;
-    const auto controller = GetBodyAnimationController();
-    if (!controller || !characterMovementComponent || !rotationComponent)
-    {
-        FailChargeAttackBT();
-        return ChargeBTStepResult::Complete;
-    }
-    if (chargeBT.phase == ChargeBTPhase::Telegraph)
-    {
-        const auto context = BuildTargetContext();
-        if (!context.valid || controller->GetCurrentAnimationName() != "Pre_FootSlide_0")
-        {
-            FailChargeAttackBT();
-            return ChargeBTStepResult::Complete;
-        }
-        const float animationTime = controller->GetCurrentAnimationTime();
-        if (animationTime < chargeDirectionLockTime)
-            RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt);
-        else if (!chargeDirectionLocked)
-        {
-            if (!LockChargeDirectionToPlayer() || !BeginChargeTelegraphVisual())
-            {
-                FailChargeAttackBT();
-                return ChargeBTStepResult::Complete;
-            }
-            chargeBT.tripleChargeTelegraphElapsed = 0.0f;
-        }
-        if (chargeDirectionLocked && chargeBT.tripleChargeTelegraphVisible)
-        {
-            chargeBT.tripleChargeTelegraphElapsed = (std::max)(
-                0.0f, animationTime - chargeDirectionLockTime);
-            const float expandDuration = (std::max)(0.001f, tripleChargeTelegraphExpandDuration);
-            const float expandProgress = std::clamp(
-                chargeBT.tripleChargeTelegraphElapsed / expandDuration, 0.0f, 1.0f);
-            UpdateChargeTelegraphVisual(expandProgress);
-        }
-        if (animationTime >= GetChargeWindupEndTime())
-        {
-            HideChargeTelegraphVisual();
-            if (!BeginSingleChargeBT()) FailChargeAttackBT();
-            return chargeBT.failed ? ChargeBTStepResult::Complete : ChargeBTStepResult::Running;
-        }
-        if (!controller->IsPlayAnimation() || !UpdateChargeAnimationWatchdogBT(animationTime, dt))
-        {
-            FailChargeAttackBT();
-            return ChargeBTStepResult::Complete;
-        }
-        return ChargeBTStepResult::Running;
-    }
-    if (chargeBT.phase != ChargeBTPhase::Charging) return ChargeBTStepResult::Failed;
-    if (controller->GetCurrentAnimationName() != "Stampede_0")
-    {
-        FailChargeAttackBT();
-        return ChargeBTStepResult::Complete;
-    }
-    chargeBT.result = UpdateChargeAttackMovement(dt);
-    if (chargeBT.result == ChargeAttackEndReason::None) return ChargeBTStepResult::Running;
-    DisableAttackHitBoxes();
-    chargeBT.phase = ChargeBTPhase::Result;
-    return ChargeBTStepResult::Complete;
+    if (!chargeTelegraphMeshComponent)
+        return;
+    const float progress = std::clamp(lengthProgress, 0.0f, 1.0f);
+    const DirectX::XMFLOAT3 direction = chargeBT.tripleChargeTelegraphDirection;
+    const float directionLength = std::sqrt(direction.x * direction.x + direction.z * direction.z);
+    if (directionLength <= FLT_EPSILON)
+        return;
+    const float yaw = std::atan2(-direction.x, -direction.z);
+    const auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yaw, 0.0f);
+    DirectX::XMFLOAT4 rotationFloat{};
+    DirectX::XMStoreFloat4(&rotationFloat, rotation);
+    const DirectX::XMFLOAT3 rootScale = GetScale();
+    const float width = chargeBT.tripleChargeTelegraphWidth;
+    const float length = chargeBT.tripleChargeTelegraphLength * progress;
+    const DirectX::XMFLOAT3 requestedScale{
+        width / (std::abs(rootScale.x) > 0.001f ? rootScale.x : 1.0f),
+        1.0f,
+        length / (std::abs(rootScale.z) > 0.001f ? rootScale.z : 1.0f) };
+    chargeTelegraphMeshComponent->SetWorldLocationDirect(
+        chargeBT.tripleChargeTelegraphStartPosition);
+    chargeTelegraphMeshComponent->SetWorldRotationDirect(rotationFloat);
+    chargeTelegraphMeshComponent->SetRelativeScaleDirect(requestedScale);
+    chargeTelegraphMeshComponent->UpdateComponentToWorld();
 }
 
-// Charge Stun
+// Charge予兆描画
+void GruxEnemy::HideChargeTelegraphVisual()
+{
+    if (chargeTelegraphMeshComponent)
+        chargeTelegraphMeshComponent->SetIsVisible(false);
+    chargeBT.tripleChargeTelegraphVisible = false;
+}
+
 bool GruxEnemy::BeginChargeStunBT()
 {
     const auto controller = GetBodyAnimationController();
     if (!controller) return false;
     HideChargeTelegraphVisual();
-    for (const char* name : {"Knock_Down_Start", "Knock_Down_Loop", "Knock_Down_End"})
+    for (const char* name : { "Knock_Down_Start", "Knock_Down_Loop", "Knock_Down_End" })
         if (!controller->GetAnimationAsset(name)) return false;
     StopChargeAttackMovement();
     DisableAttackHitBoxes();
     chargeBT.phase = ChargeBTPhase::Stun;
     chargeBT.activeStunDuration = chargeBT.tripleFinalWallHit
-        ? GetStunDuration() * chargeBT.tripleWallStunDurationMultiplier
-        : GetStunDuration();
+                                      ? GetStunDuration() * chargeBT.tripleWallStunDurationMultiplier
+                                      : GetStunDuration();
     chargeBT.stunPhase = ChargeBTStunPhase::Start;
     chargeBT.stunElapsed = 0.0f;
     chargeBT.animationElapsed = chargeBT.animationStalled = chargeBT.previousAnimationTime = 0.0f;
@@ -802,13 +858,13 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateChargeStunBT(float dt)
     const auto controller = GetBodyAnimationController();
     if (!controller) return ChargeBTStepResult::Failed;
     const char* expected = chargeBT.stunPhase == ChargeBTStunPhase::Start ? "Knock_Down_Start" :
-        chargeBT.stunPhase == ChargeBTStunPhase::Loop ? "Knock_Down_Loop" : "Knock_Down_End";
+                               chargeBT.stunPhase == ChargeBTStunPhase::Loop ? "Knock_Down_Loop" : "Knock_Down_End";
     if (controller->GetCurrentAnimationName() != expected) return ChargeBTStepResult::Failed;
     if (chargeBT.stunPhase == ChargeBTStunPhase::Loop)
     {
         chargeBT.stunElapsed += (std::max)(0.0f, dt);
         const float stunDuration = chargeBT.activeStunDuration > 0.0f
-            ? chargeBT.activeStunDuration : GetStunDuration();
+                                       ? chargeBT.activeStunDuration : GetStunDuration();
         if (chargeBT.stunElapsed < stunDuration) return ChargeBTStepResult::Running;
         chargeBT.stunPhase = ChargeBTStunPhase::End;
         chargeBT.animationElapsed = chargeBT.animationStalled = chargeBT.previousAnimationTime = 0.0f;
@@ -817,7 +873,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateChargeStunBT(float dt)
     }
     if (controller->IsPlayAnimation())
         return UpdateChargeAnimationWatchdogBT(controller->GetCurrentAnimationTime(), dt)
-            ? ChargeBTStepResult::Running : ChargeBTStepResult::Failed;
+                   ? ChargeBTStepResult::Running : ChargeBTStepResult::Failed;
     if (chargeBT.stunPhase == ChargeBTStunPhase::End) return ChargeBTStepResult::Complete;
     chargeBT.stunPhase = ChargeBTStunPhase::Loop;
     chargeBT.stunElapsed = 0.0f;
@@ -842,80 +898,7 @@ void GruxEnemy::FinishChargeAttackBT()
     ClearAttackSetupTarget();
 }
 
-GruxEnemy::ChargeBTStepResult GruxEnemy::ResolveChargeResultBT(float dt)
-{
-    if (!IsChargeAttackBTActive()) return ChargeBTStepResult::Failed;
-    if (chargeBT.phase == ChargeBTPhase::Stun)
-    {
-        const auto status = UpdateChargeStunBT(dt);
-        if (status == ChargeBTStepResult::Running) return status;
-        if (status == ChargeBTStepResult::Failed) chargeBT.failed = true;
-        chargeBT.stunPhase = ChargeBTStunPhase::None;
-        const float recoveryDuration = status == ChargeBTStepResult::Complete
-            ? GetPostStunRecoveryDuration() : GetRecoveryDurationForCurrentAttack();
-        SetNextRecoveryDuration(recoveryDuration);
-    }
-    else if (chargeBT.phase == ChargeBTPhase::Result)
-    {
-        if (!chargeBT.failed && chargeBT.result == ChargeAttackEndReason::WallHit)
-        {
-            if (BeginChargeStunBT()) return ChargeBTStepResult::Running;
-            chargeBT.failed = true;
-        }
-        float recoveryDuration = GetRecoveryDurationForCurrentAttack();
-        if (!chargeBT.failed && chargeBT.result == ChargeAttackEndReason::PlayerHit)
-        {
-            recoveryDuration = GetChargePlayerHitRecoveryDuration();
-        }
-        SetNextRecoveryDuration(recoveryDuration);
-    }
-    else return ChargeBTStepResult::Failed;
-    FinishChargeAttackBT();
-    chargeBT.phase = ChargeBTPhase::RecoveryPending;
-    return ChargeBTStepResult::Complete;
-}
-
-GruxEnemy::ChargeBTStepResult GruxEnemy::FinishChargeRecoveryBT()
-{
-    if (chargeBT.phase != ChargeBTPhase::RecoveryPostconditions) return ChargeBTStepResult::Failed;
-    CleanupChargeAttackBT();
-    return ChargeBTStepResult::Complete;
-}
-
-// Rush中断・Cleanup
-void GruxEnemy::NotifyPlayerRushStarted(Player* player)
-{
-    if (!player || !IsChargeAttackBTActive())
-        return;
-
-    rushCombatHoldActive = true;
-    interruptedChargeRecoveryPending = true;
-    interruptedChargeRecoveryActive = false;
-    interruptedChargeRecoveryTimer = 0.0f;
-    interruptedChargeRecoveryDuration = GetChargeJustDodgeRecoveryDuration();
-
-    CleanupChargeAttackBT();
-    PlayBodyAnimation("Stun_Idle", true, true, 0.15f, true);
-    ResetBehaviorTreeRuntime();
-    behaviorTreePreviousNode = "None";
-}
-
-void GruxEnemy::NotifyPlayerRushEnded(Player* player)
-{
-    if (!player)
-        return;
-
-    rushCombatHoldActive = false;
-    if (interruptedChargeRecoveryPending)
-    {
-        interruptedChargeRecoveryPending = false;
-        PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
-        interruptedChargeRecoveryActive = true;
-        interruptedChargeRecoveryTimer = 0.0f;
-    }
-}
-
-bool GruxEnemy::ShouldAbortChargeAttackBT()
+bool GruxEnemy::ShouldAbortChargeAttackBT() const
 {
     const bool executionNotAllowed = !IsChargeBTExecutionAllowed();
     const bool activeNodeNull = !activeNode;
@@ -923,12 +906,13 @@ bool GruxEnemy::ShouldAbortChargeAttackBT()
     return IsChargeAttackBTActive() &&
         (executionNotAllowed || activeNodeNull);
 }
+
 void GruxEnemy::CleanupChargeAttackBT()
 {
     // Charge固有のRuntime、演出、当たり判定を後始末する。
     HideChargeTelegraphVisual();
     if (!IsChargeAttackBTActive()) return;
-    FinishChargeAttackBT(); 
+    FinishChargeAttackBT();
     const float tripleTurnClearance = chargeBT.tripleChargeWallTurnClearance;
     const float tripleMaxDistance = chargeBT.tripleChargeLegMaxDistance;
     const float tripleMaxDuration = chargeBT.tripleChargeLegMaxDuration;
@@ -951,4 +935,25 @@ void GruxEnemy::CleanupChargeAttackBT()
     chargeBT.tripleChargeLegMaxDuration = tripleMaxDuration;
     chargeBT.tripleChargeTransitionDuration = tripleTransitionDuration;
     chargeBT.tripleWallStunDurationMultiplier = tripleStunMultiplier;
+}
+
+// Charge実行条件・準備
+bool GruxEnemy::IsChargeBTExecutionAllowed() const
+{
+    if (IsDead() || !battleAIActive || IsDeathPresentationActive() ||
+        IsAnimationEditorPreviewActive())
+        return false;
+    return true;
+}
+// アニメーション監視・Single Charge更新
+bool GruxEnemy::UpdateChargeAnimationWatchdogBT(float animationTime, float dt)
+{
+    const float safeDt = (std::max)(0.0f, dt);
+    chargeBT.animationElapsed += safeDt;
+    if (animationTime > chargeBT.previousAnimationTime + 0.00001f)
+        chargeBT.animationStalled = 0.0f;
+    else
+        chargeBT.animationStalled += safeDt;
+    chargeBT.previousAnimationTime = animationTime;
+    return chargeBT.animationStalled < 1.0f && chargeBT.animationElapsed < 10.0f;
 }

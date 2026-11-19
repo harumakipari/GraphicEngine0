@@ -528,10 +528,10 @@ public:
 	ChargeBTStepResult FinishChargeRecoveryBT();
 
 	// 対象PlayerのRush開始を受け、必要なCharge中断を処理する。
-	void NotifyPlayerRushStarted(Player* player);
+	void NotifyPlayerRushStarted(const Player* player);
 
 	// 対象PlayerのRush終了を受けて戦闘再開処理を行う。
-	void NotifyPlayerRushEnded(Player* player);
+	void NotifyPlayerRushEnded(const Player* player);
 
 	// HPがゼロ以下かを返す。
 	bool IsDead() const { return hp <= 0; }
@@ -659,7 +659,7 @@ public:
 	bool CanPlanAnyCombatDecision();
 
 	// 位置調整を計画できるか判定する。
-	bool CanPlanReposition();
+	bool CanPlanReposition() const;
 
 	// 戦闘開始時の位置調整を計画できるかを返す。
 	bool CanPlanInitialReposition() const { return initialRepositionPending && !initialRepositionFallbackIdlePending; }
@@ -784,10 +784,10 @@ public:
 	bool IsPlayerInFastComboFaceCompleteRange(const BossTargetContext& context) const;
 
 	// FastCombo前の接近移動を開始する。
-	void BeginFastComboApproach();
+	void BeginFastComboApproach() const;
 
 	// Playerへの接近と向き合わせを進め、攻撃距離への到達を返す。
-	bool UpdateFastComboApproach(float deltaTime);
+	bool UpdateFastComboApproach(float deltaTime) const;
 
 	// BTが選んだ攻撃種別と対応する行動種別を設定する。
 	void SetSelectedAttackForBehaviorTree(const BossAttackType type)
@@ -917,7 +917,7 @@ private:
 	ChargeBTStepResult UpdateTripleChargeBT(float deltaTime);
 
 	// 第2段階のCharge設定を使うか判定する。
-	bool IsPhase2ChargeActive();
+	bool IsPhase2ChargeActive() const;
 
 	// 現在のフェーズに対応するCharge速度を返す。
 	float GetActiveChargeSpeed() const;
@@ -938,7 +938,7 @@ private:
 	bool BeginChargeTelegraphVisual();
 
 	// 進行度に応じてChargeの予兆表示を更新する。
-	void UpdateChargeTelegraphVisual(float lengthProgress);
+	void UpdateChargeTelegraphVisual(float lengthProgress) const;
 
 	// Charge開始方向の障害物までの距離を調べる。
 	bool EvaluateChargeStartClearance(const DirectX::XMFLOAT3& startPosition, const DirectX::XMFLOAT3& direction, float& outClearance, bool& outHit) const;
@@ -959,7 +959,7 @@ private:
 	void FinishChargeAttackBT();
 
 	// Chargeを中断すべき状態か判定する。
-	bool ShouldAbortChargeAttackBT();
+	bool ShouldAbortChargeAttackBT() const;
 
 	// Chargeの中断または終了に伴う状態と演出を整理する。
 	void CleanupChargeAttackBT();
@@ -1036,13 +1036,13 @@ private:
 	void ShowRoarTelegraph();
 
 	// Roar予兆の位置と大きさを更新する。
-	void UpdateRoarTelegraphTransform();
+	void UpdateRoarTelegraphTransform() const;
 
 	// Roar予兆の進行度を更新する。
 	void UpdateRoarTelegraphProgress();
 
 	// Roar予兆を非表示にする。
-	void HideRoarTelegraph();
+	void HideRoarTelegraph() const;
 
 	// Roar予兆中の浮遊物を用意する。
 	void EnsureRoarFloatingDebris();
@@ -1054,7 +1054,7 @@ private:
 	void UpdateRoarFloatingDebris();
 
 	// Roar予兆中の浮遊物を非表示にする。
-	void HideRoarFloatingDebris();
+	void HideRoarFloatingDebris() const;
 
 	// Roar衝撃時の破片を用意する。
 	void EnsureRoarImpactDebris();
@@ -1069,7 +1069,7 @@ private:
 	void HideRoarImpactDebris();
 
 	// Roar衝撃時の地面エフェクトを生成する。
-	void SpawnRoarGroundBurst();
+	void SpawnRoarGroundBurst() const;
 
 	// Roarなどのクールダウンを更新し、Roarの中断を処理する。
 	void TickRoarLifecycle(float dt);
@@ -1092,7 +1092,7 @@ private:
 	bool FindAttackSetupTarget(float minDistance, float maxDistance, float angleStep, float clampTolerance, float minimumMoveDistance, DirectX::XMFLOAT3& outTarget, float boundaryMarginOverride = -1.0f) const;
 
 	// 戦闘判断の推論を開始する。
-	void BeginCombatDecisionInference();
+	void BeginCombatDecisionInference() const;
 
 	// ボス部屋の壁を考慮して移動先と経路を評価する。
 	bool ResolveBossRoomPositioningMove(const DirectX::XMFLOAT3& startPosition,const DirectX::XMFLOAT3& desiredTarget, DirectX::XMFLOAT3& outResolvedTarget,bool& outPathBlocked) const;

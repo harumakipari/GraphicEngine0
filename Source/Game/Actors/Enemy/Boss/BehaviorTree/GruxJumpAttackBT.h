@@ -13,14 +13,14 @@ class PrepareJumpSetupTarget : public ActionBase
 {
 public:
     using ActionBase::ActionBase;
-    State Run(float) override;
+    State Run(float dt) override;
 };
 
 class MoveToAttackSetupTarget : public ActionBase
 {
 public:
     using ActionBase::ActionBase;
-    State Run(float) override;
+    State Run(float dt) override;
 };
 
 class CanPlanAnyAttack : public JudgementBase
@@ -34,7 +34,7 @@ class FaceJumpPlayerIfNeeded : public ActionBase
 {
 public:
     using ActionBase::ActionBase;
-    State Run(float) override;
+    State Run(float dt) override;
 };
 
 class CanExecuteJumpAttack : public JudgementBase
@@ -48,7 +48,7 @@ class StartJumpAttack : public ActionBase
 {
 public:
     using ActionBase::ActionBase;
-    State Run(float) override;
+    State Run(float dt) override;
     void ResetRuntime() override { started = false; }
 private:
     bool started = false;
@@ -58,10 +58,10 @@ class ExecuteJumpAttack : public ActionBase
 {
 public:
     using ActionBase::ActionBase;
-    State Run(float) override;
+    State Run(float dt) override;
     void ResetRuntime() override;
 private:
-    State RunTripleJump(float deltaTime);
+    State RunTripleJump(float dt);
     bool started = false;
     bool executionStarted = false;
     bool finishAfterAnimation = false;

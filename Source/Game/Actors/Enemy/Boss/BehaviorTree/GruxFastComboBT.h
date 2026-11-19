@@ -8,7 +8,7 @@ class BTStartDeath : public ActionBase
 {
 public:
     using ActionBase::ActionBase;
-    State Run(float) override;
+    State Run(float dt) override;
     void ResetRuntime() override {}
 };
 
@@ -17,7 +17,7 @@ class BTExecuteDeath : public ActionBase
 {
 public:
     using ActionBase::ActionBase;
-    State Run(float) override;
+    State Run(float dt) override;
 };
 
 // ƒ{ƒX‚ªŽ€–S‚µ‚½‚©‚Ç‚¤‚©
@@ -71,7 +71,7 @@ class BTCompleteAction : public ActionBase
 {
 public:
     BTCompleteAction(GruxEnemy* enemy) :ActionBase(enemy) {}
-    ActionBase::State Run(float elapsedTime) override { return State::Complete; }
+    ActionBase::State Run(float dt) override { return State::Complete; }
 };
 
 // FastCombo‚ÌŽË’ö‚Ü‚ÅÚ‹ß‚·‚é
@@ -79,7 +79,7 @@ class ApproachIfNeeded : public ActionBase
 {
 public:
     using ActionBase::ActionBase;
-    State Run(float) override;
+    State Run(float dt) override;
     void ResetRuntime() override { started = false; timer = 0.0f; }
 private:
     bool started = false;
@@ -91,7 +91,7 @@ class FacePlayerIfNeeded : public ActionBase
 {
 public:
     using ActionBase::ActionBase;
-    State Run(float) override;
+    State Run(float dt) override;
 };
 
 
@@ -99,7 +99,7 @@ class StartFastCombo : public ActionBase
 {
 public:
     using ActionBase::ActionBase;
-    State Run(float) override;
+    State Run(float dt) override;
 };
 
 // FastCombo‚ðŽÀs‚·‚é
@@ -107,7 +107,7 @@ class ExecuteFastCombo : public ActionBase
 {
 public:
     using ActionBase::ActionBase;
-    State Run(float) override;
+    State Run(float dt) override;
     void ResetRuntime() override { owner->ClearFastComboStepIn(); stage = 0; stageHitCount = 0; started = false; finishAfterAnimation = false; timer = 0.0f; runtimeState = GruxEnemy::FastComboRuntimeState::Attack; }
 private:
     int stage = 0;

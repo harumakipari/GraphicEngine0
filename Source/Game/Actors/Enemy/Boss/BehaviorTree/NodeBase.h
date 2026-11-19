@@ -31,26 +31,26 @@ public:
 	// 名前ゲッター
 	std::string GetName() const  { return name; }
 	// 優先順位ゲッター
-	int GetPriority() { return priority; }
+	int GetPriority() const { return priority; }
 	// 子ノード追加
 	void AddChild(std::shared_ptr<NodeBase> child) { children.push_back(child); }
 	// 行動データを持っているか
-	bool HasAction() { return action != nullptr ? true : false; }
+	bool HasAction() const { return action != nullptr ? true : false; }
 	// 実行可否判定
-	bool Judgment();
+	bool Judgment() const;
 	// ノード検索
 	std::weak_ptr<NodeBase> SearchNode(const std::string& searchName);
 	// ノード推論
 	NodeBase* Inference(BehaviorData* data);
 	// 実行
-	ActionBase::State Run(float elapsedTime);
-	void ResetActionRuntimes();
+	ActionBase::State Run(float elapsedTime) const;
+	void ResetActionRuntimes() const;
 private:
 	// 優先順位選択
-	NodeBase* SelectPriority(std::vector<std::shared_ptr<NodeBase>>* list);
+	NodeBase* SelectPriority(const std::vector<std::shared_ptr<NodeBase>>* list);
 	// ランダム選択
-	NodeBase* SelectRandom(std::vector<std::shared_ptr<NodeBase>>* list);
-	NodeBase* SelectAttackRandom(std::vector<std::shared_ptr<NodeBase>>* list);
+	NodeBase* SelectRandom(const std::vector<std::shared_ptr<NodeBase>>* list);
+	NodeBase* SelectAttackRandom(const std::vector<std::shared_ptr<NodeBase>>* list) const;
 	// シーケンス選択
 	NodeBase* SelectSequence(std::vector<std::shared_ptr<NodeBase>>* list, BehaviorData* data);
 	std::vector<std::shared_ptr<NodeBase>>		children;		// 子ノード
