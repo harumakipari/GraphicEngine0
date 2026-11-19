@@ -426,7 +426,7 @@ void ClothSimulate::FetchTextures(ID3D11Device* device, const tinygltf::Model& g
 void ClothSimulate::Update(float deltaTime)
 {
     lastExecutedSubsteps = 0;
-    if (!cbuffer || !enableClothSimulation || simulationStage == SimulationStage::InitialMesh || !std::isfinite(deltaTime))
+    if (!cbuffer || !enableClothSimulation || !std::isfinite(deltaTime))
         return;
 
     const float maxAccumulatedTime = fixedDeltaTime * static_cast<float>(maxSubsteps);
@@ -439,16 +439,7 @@ void ClothSimulate::RecreateClothBuffers(ID3D11Device* device)
 {
     if (!cbuffer)
         return;
-
-    lastUpdateInputBuffer = -1;
-    lastUpdateOutputBuffer = -1;
-    lastConstraintInputBuffer = -1;
-    lastConstraintOutputBuffer = -1;
     lastCopySourceBuffer = -1;
-    lastDispatchGroupCountX = 0;
-    lastVertexCount = 0;
-    lastVertexDiagnostics.clear();
-    lastClothStretchDiagnostics = {};
     simulationAccumulator = 0.0f;
     simulationElapsedTime = 0.0f;
     lastExecutedSubsteps = 0;
@@ -456,7 +447,6 @@ void ClothSimulate::RecreateClothBuffers(ID3D11Device* device)
     pendingReadbackQuery.Reset();
     pendingReadbackPrimitive = nullptr;
     lastSimulatedPrimitive = nullptr;
-    lastVertexDiagnosticStatus = "Not captured (buffers reset)";
     for (auto& mesh : meshes)
     {
         for (auto& primitive : mesh.primitives)
@@ -833,27 +823,15 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
 
 }
 
-const char* ClothSimulate::GetSimulationStageName() const
-{
-    switch (simulationStage)
-    {
-    case SimulationStage::InitialMesh: return "Initial Mesh";
-    case SimulationStage::UpdateCSOnly: return "Update CS Only";
-    case SimulationStage::UpdateAndConstraint: return "Update + Constraint";
-    }
-    return "Unknown";
-}
 
 void ClothSimulate::CaptureVertexDiagnostics(ID3D11DeviceContext* immediateContext)
 {
     if (pendingReadbackQuery)
     {
-        lastVertexDiagnosticStatus = "Capture already pending; waiting for GPU event.";
         return;
     }
     if (!immediateContext)
     {
-        lastVertexDiagnosticStatus = "Capture failed: immediate context is null.";
         return;
     }
 
@@ -871,14 +849,12 @@ void ClothSimulate::CaptureVertexDiagnostics(ID3D11DeviceContext* immediateConte
     }
     if (!primitive || primitive->cachedVertices.empty())
     {
-        lastVertexDiagnosticStatus = "Capture failed: no cloth primitive/vertices.";
         return;
     }
 
     const int sourceIndex = lastCopySourceBuffer >= 0 ? lastCopySourceBuffer : primitive->ping;
     if (sourceIndex < 0 || sourceIndex > 1 || !primitive->clothBuffer[sourceIndex])
     {
-        lastVertexDiagnosticStatus = std::format("Capture failed: draw-source clothBuffer[{}] is invalid.", sourceIndex);
         return;
     }
 
@@ -887,7 +863,6 @@ void ClothSimulate::CaptureVertexDiagnostics(ID3D11DeviceContext* immediateConte
     const UINT expectedByteWidth = static_cast<UINT>(primitive->cachedVertices.size() * sizeof(Mesh::Vertex));
     if (sourceDesc.ByteWidth != expectedByteWidth)
     {
-        lastVertexDiagnosticStatus = std::format("Capture failed: source ByteWidth={} expected={}", sourceDesc.ByteWidth, expectedByteWidth);
         return;
     }
 
@@ -901,7 +876,6 @@ void ClothSimulate::CaptureVertexDiagnostics(ID3D11DeviceContext* immediateConte
     HRESULT hr = Graphics::GetDevice()->CreateBuffer(&stagingDesc, nullptr, pendingReadbackBuffer.ReleaseAndGetAddressOf());
     if (FAILED(hr))
     {
-        lastVertexDiagnosticStatus = std::format("Capture failed: CreateBuffer staging hr=0x{:08X}", static_cast<unsigned>(hr));
         return;
     }
 
@@ -910,7 +884,6 @@ void ClothSimulate::CaptureVertexDiagnostics(ID3D11DeviceContext* immediateConte
     if (FAILED(hr))
     {
         pendingReadbackBuffer.Reset();
-        lastVertexDiagnosticStatus = std::format("Capture failed: CreateQuery(event) hr=0x{:08X}", static_cast<unsigned>(hr));
         return;
     }
 
@@ -919,7 +892,6 @@ void ClothSimulate::CaptureVertexDiagnostics(ID3D11DeviceContext* immediateConte
     pendingReadbackPollCount = 0;
     immediateContext->CopyResource(pendingReadbackBuffer.Get(), primitive->clothBuffer[sourceIndex].Get());
     immediateContext->End(pendingReadbackQuery.Get());
-    lastVertexDiagnosticStatus = std::format("Capture queued: clothBuffer[{}] -> staging ({} bytes); awaiting GPU event.", sourceIndex, stagingDesc.ByteWidth);
 }
 
 void ClothSimulate::UpdateVertexDiagnosticsCapture(ID3D11DeviceContext* immediateContext)
@@ -937,11 +909,6 @@ void ClothSimulate::UpdateVertexDiagnosticsCapture(ID3D11DeviceContext* immediat
             pendingReadbackBuffer.Reset();
             pendingReadbackQuery.Reset();
             pendingReadbackPrimitive = nullptr;
-            lastVertexDiagnosticStatus = "Capture timed out after 600 frames: GetData returned S_FALSE (no GPU completion).";
-        }
-        else
-        {
-            lastVertexDiagnosticStatus = std::format("Capture pending: GetData=S_FALSE (frame {}/600).", pendingReadbackPollCount);
         }
         return;
     }
@@ -950,17 +917,12 @@ void ClothSimulate::UpdateVertexDiagnosticsCapture(ID3D11DeviceContext* immediat
         pendingReadbackBuffer.Reset();
         pendingReadbackQuery.Reset();
         pendingReadbackPrimitive = nullptr;
-        lastVertexDiagnosticStatus = std::format("Capture failed: GetData hr=0x{:08X}, completed={}", static_cast<unsigned>(hr), completed ? 1 : 0);
         return;
     }
 
     D3D11_MAPPED_SUBRESOURCE mapped = {};
     const HRESULT mapHr = immediateContext->Map(pendingReadbackBuffer.Get(), 0, D3D11_MAP_READ, 0, &mapped);
-    if (FAILED(mapHr))
-    {
-        lastVertexDiagnosticStatus = std::format("Capture failed: Map(staging) hr=0x{:08X}", static_cast<unsigned>(mapHr));
-    }
-    else
+    if (!FAILED(mapHr))
     {
         const Mesh::Primitive& primitive = *pendingReadbackPrimitive;
         const Mesh::Vertex* vertices = static_cast<const Mesh::Vertex*>(mapped.pData);
@@ -977,108 +939,8 @@ void ClothSimulate::UpdateVertexDiagnosticsCapture(ID3D11DeviceContext* immediat
             if (primitive.cachedVertices[i].position.y < primitive.cachedVertices[bottom].position.y)
                 bottom = i;
         }
-        const DirectX::XMFLOAT3 center = {
-            (primitive.cachedVertices[top].position.x + primitive.cachedVertices[bottom].position.x) * 0.5f,
-            (primitive.cachedVertices[top].position.y + primitive.cachedVertices[bottom].position.y) * 0.5f,
-            (primitive.cachedVertices[top].position.z + primitive.cachedVertices[bottom].position.z) * 0.5f };
-        float closestDistanceSq = FLT_MAX;
-        for (UINT i = 0; i < primitive.cachedVertices.size(); ++i)
-        {
-            const auto& p = primitive.cachedVertices[i].position;
-            const float dx = p.x - center.x, dy = p.y - center.y, dz = p.z - center.z;
-            const float distanceSq = dx * dx + dy * dy + dz * dz;
-            if (distanceSq < closestDistanceSq)
-            {
-                closestDistanceSq = distanceSq;
-                middle = i;
-            }
-        }
-        lastVertexDiagnostics.clear();
-        const std::array<UINT, 3> sampleIndices = { top, middle, bottom };
-        const std::array<const char*, 3> sampleLabels = { foundPinnedTop ? "top pinned" : "top (no pin)", "center", "bottom" };
-        for (size_t sample = 0; sample < sampleIndices.size(); ++sample)
-        {
-            const UINT index = sampleIndices[sample];
-            const Mesh::Vertex& current = vertices[index];
-            const Mesh::Vertex& initial = primitive.cachedVertices[index];
-            const float dx = current.position.x - initial.position.x;
-            const float dy = current.position.y - initial.position.y;
-            const float dz = current.position.z - initial.position.z;
-            const bool finite = std::isfinite(current.position.x) && std::isfinite(current.position.y) && std::isfinite(current.position.z) &&
-                std::isfinite(current.velocity.x) && std::isfinite(current.velocity.y) && std::isfinite(current.velocity.z);
-            lastVertexDiagnostics.push_back({ sampleLabels[sample], index, current.position, current.velocity, std::sqrt(dx * dx + dy * dy + dz * dz), finite });
-        }
-        ClothStretchDiagnostics diagnostics = {};
-        diagnostics.vertexCount = static_cast<UINT>(primitive.cachedVertices.size());
-        diagnostics.finite = true;
-        float initialMinY = FLT_MAX, initialMaxY = -FLT_MAX;
-        float currentMinY = FLT_MAX, currentMaxY = -FLT_MAX;
-        float maxSpeedSq = 0.0f;
-        for (UINT i = 0; i < diagnostics.vertexCount; ++i)
-        {
-            const Mesh::Vertex& initial = primitive.cachedVertices[i];
-            const Mesh::Vertex& current = vertices[i];
-            initialMinY = (std::min)(initialMinY, initial.position.y);
-            initialMaxY = (std::max)(initialMaxY, initial.position.y);
-            currentMinY = (std::min)(currentMinY, current.position.y);
-            currentMaxY = (std::max)(currentMaxY, current.position.y);
-            const float speedSq = current.velocity.x * current.velocity.x + current.velocity.y * current.velocity.y + current.velocity.z * current.velocity.z;
-            maxSpeedSq = (std::max)(maxSpeedSq, speedSq);
-            diagnostics.finite = diagnostics.finite && std::isfinite(current.position.x) && std::isfinite(current.position.y) && std::isfinite(current.position.z) &&
-                std::isfinite(current.velocity.x) && std::isfinite(current.velocity.y) && std::isfinite(current.velocity.z);
-        }
-        diagnostics.initialHeight = initialMaxY - initialMinY;
-        diagnostics.currentHeight = currentMaxY - currentMinY;
-        diagnostics.maxVertexSpeed = std::sqrt(maxSpeedSq);
-
-        std::vector<UINT> connectionCounts(diagnostics.vertexCount, 0);
-        std::unordered_set<uint64_t> uniqueSprings;
-        float restSum = 0.0f;
-        float stretchRatioSum = 0.0f;
-        diagnostics.restLengthMin = FLT_MAX;
-        for (UINT edgeIndex = 0; edgeIndex < primitive.finalEdges.size(); ++edgeIndex)
-        {
-            const ClothEdge& edge = primitive.finalEdges[edgeIndex];
-            const UINT vertexIndex = edgeIndex / 8;
-            if (vertexIndex >= diagnostics.vertexCount || edge.neighbor == UINT32_MAX || edge.neighbor >= diagnostics.vertexCount || edge.restLength <= 0.0f)
-                continue;
-
-            ++diagnostics.directedSpringCount;
-            ++connectionCounts[vertexIndex];
-            const UINT lower = (std::min)(vertexIndex, edge.neighbor);
-            const UINT upper = (std::max)(vertexIndex, edge.neighbor);
-            uniqueSprings.insert((static_cast<uint64_t>(lower) << 32) | upper);
-            const Mesh::Vertex& a = vertices[vertexIndex];
-            const Mesh::Vertex& b = vertices[edge.neighbor];
-            const float dx = b.position.x - a.position.x;
-            const float dy = b.position.y - a.position.y;
-            const float dz = b.position.z - a.position.z;
-            const float currentLength = std::sqrt(dx * dx + dy * dy + dz * dz);
-            const float stretchRatio = currentLength / edge.restLength;
-            diagnostics.restLengthMin = (std::min)(diagnostics.restLengthMin, edge.restLength);
-            diagnostics.restLengthMax = (std::max)(diagnostics.restLengthMax, edge.restLength);
-            diagnostics.maxStretchRatio = (std::max)(diagnostics.maxStretchRatio, stretchRatio);
-            restSum += edge.restLength;
-            stretchRatioSum += stretchRatio;
-            diagnostics.finite = diagnostics.finite && std::isfinite(edge.restLength) && std::isfinite(currentLength) && std::isfinite(stretchRatio);
-        }
-        diagnostics.uniqueSpringCount = static_cast<UINT>(uniqueSprings.size());
-        if (diagnostics.directedSpringCount > 0)
-        {
-            diagnostics.restLengthAverage = restSum / diagnostics.directedSpringCount;
-            diagnostics.averageStretchRatio = stretchRatioSum / diagnostics.directedSpringCount;
-            diagnostics.minConnections = *std::min_element(connectionCounts.begin(), connectionCounts.end());
-            diagnostics.maxConnections = *std::max_element(connectionCounts.begin(), connectionCounts.end());
-            diagnostics.averageConnections = static_cast<float>(diagnostics.directedSpringCount) / diagnostics.vertexCount;
-        }
-        else
-        {
-            diagnostics.restLengthMin = 0.0f;
-        }
-        diagnostics.valid = true;
-        lastClothStretchDiagnostics = diagnostics;
+       
         immediateContext->Unmap(pendingReadbackBuffer.Get(), 0);
-        lastVertexDiagnosticStatus = std::format("Captured draw-source clothBuffer[{}] after {}.", pendingReadbackSourceBuffer, GetSimulationStageName());
     }
     pendingReadbackBuffer.Reset();
     pendingReadbackQuery.Reset();
@@ -1086,7 +948,7 @@ void ClothSimulate::UpdateVertexDiagnosticsCapture(ID3D11DeviceContext* immediat
 }
 void ClothSimulate::Simulate(ID3D11DeviceContext* immediateContext)
 {
-    if (!cbuffer || !enableClothSimulation || simulationStage == SimulationStage::InitialMesh)
+    if (!cbuffer || !enableClothSimulation)
         return;
 
     const UINT substepCount = (std::min)(static_cast<UINT>(simulationAccumulator / fixedDeltaTime), static_cast<UINT>(maxSubsteps));
@@ -1125,12 +987,6 @@ void ClothSimulate::Simulate(ID3D11DeviceContext* immediateContext)
                 int& output = primitive.pong;
                 const UINT threadGroupCountX = Align(static_cast<UINT>(primitive.cachedVertices.size()), NUMTHREAD_X) / NUMTHREAD_X;
                 lastSimulatedPrimitive = &primitive;
-                lastVertexCount = static_cast<UINT>(primitive.cachedVertices.size());
-                lastDispatchGroupCountX = threadGroupCountX;
-                lastUpdateInputBuffer = input;
-                lastUpdateOutputBuffer = output;
-                lastConstraintInputBuffer = -1;
-                lastConstraintOutputBuffer = -1;
                 lastCopySourceBuffer = -1;
 
                 immediateContext->CSSetUnorderedAccessViews(0, 1, primitive.clothUAV[output].GetAddressOf(), nullptr);
@@ -1146,14 +1002,7 @@ void ClothSimulate::Simulate(ID3D11DeviceContext* immediateContext)
                 immediateContext->CSSetShaderResources(2, 1, nullSRV);
 
                 std::swap(input, output);
-                if (simulationStage == SimulationStage::UpdateCSOnly)
-                {
-                    lastCopySourceBuffer = input;
-                    continue;
-                }
 
-                lastConstraintInputBuffer = input;
-                lastConstraintOutputBuffer = output;
                 immediateContext->CSSetUnorderedAccessViews(0, 1, primitive.clothUAV[output].GetAddressOf(), nullptr);
                 immediateContext->CSSetShaderResources(0, 1, primitive.clothSRV[input].GetAddressOf());
                 immediateContext->CSSetShaderResources(1, 1, primitive.clothEdgeSRV.GetAddressOf());
@@ -1229,65 +1078,33 @@ void ClothSimulate::Render(ID3D11DeviceContext* immediateContext, const DirectX:
                 computePrimitiveData.hasTangent = primitive.has("TANGENT");
                 computePrimitiveData.skin = node.skin;
                 //座標系の変換を行う
-                const DirectX::XMFLOAT4X4 coordinateSystemTransforms[]
-                {
-                    {//RHS Y-UP
-                        -1,0,0,0,
-                         0,1,0,0,
-                         0,0,1,0,
-                         0,0,0,1,
-                    },
-                    {//LHS Y-UP
-                        1,0,0,0,
-                        0,1,0,0,
-                        0,0,1,0,
-                        0,0,0,1,
-                    },
-                    {//RHS Z-UP
-                        -1,0, 0,0,
-                         0,0,-1,0,
-                         0,1, 0,0,
-                         0,0, 0,1,
-                    },
-                    {//LHS Z-UP
-                        1,0,0,0,
-                        0,0,1,0,
-                        0,1,0,0,
-                        0,0,0,1,
-                    },
+                const DirectX::XMFLOAT4X4 coordinateSystemTransform =
+                {//LHS Y-UP
+                    1,0,0,0,
+                    0,1,0,0,
+                    0,0,1,0,
+                    0,0,0,1,
                 };
 
-                float scaleFactor;
-
-                if (isModelInMeters)
-                {
-                    scaleFactor = 1.0f;//メートル単位の時
-                }
-                else
-                {
-                    scaleFactor = 0.01f;//㎝単位の時
-                }
-                DirectX::XMMATRIX C{ DirectX::XMLoadFloat4x4(&coordinateSystemTransforms[static_cast<int>(modelCoordinateSystem)]) * DirectX::XMMatrixScaling(scaleFactor,scaleFactor,scaleFactor) };
+                float scaleFactor = 1.0f;
+                DirectX::XMMATRIX C{ DirectX::XMLoadFloat4x4(&coordinateSystemTransform) * DirectX::XMMatrixScaling(scaleFactor,scaleFactor,scaleFactor) };
 
                 DirectX::XMStoreFloat4x4(&computePrimitiveData.world, DirectX::XMLoadFloat4x4(&node.globalTransform) * C * DirectX::XMLoadFloat4x4(&world));
                 DirectX::XMMATRIX WorldMatrix = DirectX::XMLoadFloat4x4(&computePrimitiveData.world);
                 DirectX::XMMATRIX InvWorldMatrix = DirectX::XMMatrixInverse(nullptr, WorldMatrix);
                 DirectX::XMStoreFloat4x4(&computePrimitiveData.invWorld, InvWorldMatrix);
-                // Compute b0 is exclusively bound to CS and matches the 144-byte CS layout.
                 immediateContext->UpdateSubresource(computePrimitiveCbuffer.Get(), 0, 0, &computePrimitiveData, 0, 0);
                 immediateContext->CSSetConstantBuffers(0, 1, computePrimitiveCbuffer.GetAddressOf());
 
-                if (simulationStage != SimulationStage::InitialMesh)
-                    Simulate(immediateContext);
+                Simulate(immediateContext);
 
-                // Graphics b0 is updated after compute and immediately before the cloth draw.
                 GraphicsPrimitiveConstants graphicsPrimitiveData = {};
                 graphicsPrimitiveData.world = computePrimitiveData.world;
                 graphicsPrimitiveData.previousWorld = primitive.hasPreviousGraphicsWorld ? primitive.previousGraphicsWorld : graphicsPrimitiveData.world;
                 graphicsPrimitiveData.material = primitive.material;
                 graphicsPrimitiveData.hasTangent = primitive.has("TANGENT");
                 graphicsPrimitiveData.skin = node.skin;
-                graphicsPrimitiveData.materialType = 99; // Cloth tag for opacity testing and Furniture classification.
+                graphicsPrimitiveData.materialType = 99;
                 DirectX::XMStoreFloat4x4(&graphicsPrimitiveData.inverseTransposeWorld,
                     DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(nullptr, WorldMatrix)));
                 immediateContext->UpdateSubresource(graphicsPrimitiveCbuffer.Get(), 0, 0, &graphicsPrimitiveData, 0, 0);

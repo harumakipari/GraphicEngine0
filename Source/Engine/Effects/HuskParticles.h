@@ -54,21 +54,6 @@ struct HuskParticles
         float capturePadding{};
     };
 
-#ifdef _DEBUG
-    struct CaptureXMeasurement
-    {
-        bool attempted = false;
-        bool valid = false;
-        HRESULT result = S_OK;
-        UINT particleCount = 0;
-        UINT nonFiniteCount = 0;
-        float minimum = 0.0f;
-        float maximum = 0.0f;
-    };
-    CaptureXMeasurement capturedX;
-
-    void MeasureCapturedWorldX(ID3D11DeviceContext* context, UINT count);
-#endif
     ParticleConstants particleData;
     std::unique_ptr<ConstantBuffer<ParticleConstants>> particleCBuffer;
 

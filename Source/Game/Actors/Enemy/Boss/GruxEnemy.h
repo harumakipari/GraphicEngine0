@@ -304,7 +304,7 @@ public:
 
 	void DrawImGuiDetails() override;
 
-	void PlayBodyAnimation(const std::string& name, bool loop = true, bool blend = true, float blendTime = 0.3f, bool ignoreRootMotion = false) const;
+	void PlayBodyAnimation(const std::string& name, bool loop = true, bool blend = true, float blendTime = 0.3f, bool ignoreRootMotion = false) const override;
 
 	void PlayPhase2CinematicBodyAnimation(const std::string& name, bool loop, bool blend, float blendTime, bool ignoreRootMotion) const;
 
@@ -367,7 +367,7 @@ public:
 	bool IsBattleAIActive() const { return battleAIActive; }
 
 	// フェーズ遷移のアニメーションを外部が管理するか設定する。
-	void SetPhase2CinematicAnimationOwnedExternally(bool owned)
+	void SetPhase2CinematicAnimationOwnedExternally(const bool owned)
 	{
 		phase2CinematicAnimationOwnedExternally = owned;
 	}
@@ -790,7 +790,7 @@ public:
 	bool UpdateFastComboApproach(float deltaTime);
 
 	// BTが選んだ攻撃種別と対応する行動種別を設定する。
-	void SetSelectedAttackForBehaviorTree(BossAttackType type)
+	void SetSelectedAttackForBehaviorTree(const BossAttackType type)
 	{
 		selectedAttackType = type;
 		switch (type)
@@ -837,7 +837,7 @@ public:
 	float GetInterStageFaceDelay() const { return interStageFaceDelay; }
 
 	// FastComboの実行段階を設定する。
-	void SetFastComboRuntimeStage(int stage) { fastComboRuntimeStage = stage; }
+	void SetFastComboRuntimeStage(const int stage) { fastComboRuntimeStage = stage; }
 
 private:
 

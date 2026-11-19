@@ -19,21 +19,12 @@ void FogEffect::Initialize(ID3D11Device* device, uint32_t width, uint32_t height
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     D3D11_TEXTURE2D_DESC texture2dDesc;
-#if 0
-    hr = LoadTextureFromFile(device, L"./Data/ShaderTextures/noise.png", noise2d.GetAddressOf(), &texture2dDesc);
-    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-#else
     hr = LoadTextureFromFile(device, L"./Data/ShaderTextures/noise1.png", noise2d.ReleaseAndGetAddressOf(), &texture2dDesc);
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-#endif
 
-#if 1
     Microsoft::WRL::ComPtr<ID3D11Resource> resource;
     hr = DirectX::CreateDDSTextureFromFile(device, L"./Data/ShaderTextures/_noise_3d.dds", resource.ReleaseAndGetAddressOf(), noise3d.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-#else
-    ////////PreComputeNoiseTexture3d(device.Get(), 64, noise3d.GetAddressOf());
-#endif
 }
 
 void FogEffect::Apply(ID3D11DeviceContext* immediateContext, ID3D11ShaderResourceView* gBufferColor, ID3D11ShaderResourceView* gbufferNormal, ID3D11ShaderResourceView* gbufferDepth, ID3D11ShaderResourceView* gBufferPosition, ID3D11ShaderResourceView* gBufferPbrValue, ID3D11ShaderResourceView* gBufferVelocity, ID3D11ShaderResourceView* shadowMap)

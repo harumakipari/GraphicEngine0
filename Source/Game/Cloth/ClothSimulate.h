@@ -2,12 +2,10 @@
 #define NOMINMAX
 
 #include <d3d11.h>
-#include <wrl.h>
 #include <directxmath.h>
 
 #include <vector>
 #include <unordered_map>
-#include <optional>
 #include <string>
 #include <cstddef>
 
@@ -19,9 +17,6 @@
 #include <cereal/types/vector.hpp>
 #include <cereal/types/set.hpp>
 #include <cereal/types/unordered_map.hpp>
-
-#include "Physics/Collider.h"
-#include "Graphics/Core/PipelineState.h"
 #include "Graphics/Core/ConstantBuffer.h"
 
 
@@ -31,30 +26,6 @@ class ClothSimulate
     std::shared_ptr<tinygltf::Model> gltfModel;
     static inline std::unordered_map<std::string, std::weak_ptr<tinygltf::Model>> cachedGltfModels;
     std::string filename;
-public:
-    enum class SimulationStage
-    {
-        InitialMesh = 0,
-        UpdateCSOnly,
-        UpdateAndConstraint,
-    };
-
-    //モデルの座標系
-    enum class CoordinateSystem
-    {
-        RH_Y_UP,
-        LH_Y_UP,
-        RH_Z_UP,
-        LH_Z_UP
-    };
-
-    //モデルがメートル単位か cm単位の時はfalseにする
-private:
-    bool isModelInMeters = true;
-
-    //モデル固有の座標系 //初期　LH_Y_UP
-    CoordinateSystem modelCoordinateSystem = CoordinateSystem::LH_Y_UP;
-
 public:
     ClothSimulate(ID3D11Device* device, const std::string& filename);
     virtual ~ClothSimulate() = default;
@@ -196,7 +167,6 @@ private:
     float simulationAccumulator = 0.0f;
     float simulationElapsedTime = 0.0f;
     UINT lastExecutedSubsteps = 0;
-    SimulationStage simulationStage = SimulationStage::UpdateAndConstraint;
     bool disableCulling = false;
 
 private:
@@ -654,38 +624,9 @@ private:
         bool finite = true;
     };
 
-    struct ClothStretchDiagnostics
-    {
-        UINT vertexCount = 0;
-        UINT directedSpringCount = 0;
-        UINT uniqueSpringCount = 0;
-        UINT minConnections = 0;
-        UINT maxConnections = 0;
-        float averageConnections = 0.0f;
-        float restLengthMin = 0.0f;
-        float restLengthMax = 0.0f;
-        float restLengthAverage = 0.0f;
-        float initialHeight = 0.0f;
-        float currentHeight = 0.0f;
-        float maxStretchRatio = 0.0f;
-        float averageStretchRatio = 0.0f;
-        float maxVertexSpeed = 0.0f;
-        bool finite = true;
-        bool valid = false;
-    };
     void CaptureVertexDiagnostics(ID3D11DeviceContext* immediateContext);
     void UpdateVertexDiagnosticsCapture(ID3D11DeviceContext* immediateContext);
-    const char* GetSimulationStageName() const;
-    int lastUpdateInputBuffer = -1;
-    int lastUpdateOutputBuffer = -1;
-    int lastConstraintInputBuffer = -1;
-    int lastConstraintOutputBuffer = -1;
     int lastCopySourceBuffer = -1;
-    UINT lastDispatchGroupCountX = 0;
-    UINT lastVertexCount = 0;
-    std::vector<VertexDiagnostic> lastVertexDiagnostics;
-    ClothStretchDiagnostics lastClothStretchDiagnostics;
-    std::string lastVertexDiagnosticStatus = "Not captured";
     Microsoft::WRL::ComPtr<ID3D11Buffer> pendingReadbackBuffer;
     Microsoft::WRL::ComPtr<ID3D11Query> pendingReadbackQuery;
     const Mesh::Primitive* pendingReadbackPrimitive = nullptr;
@@ -731,13 +672,6 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Buffer> graphicsPrimitiveCbuffer;
     void FetchMaterials(ID3D11Device* device, const tinygltf::Model& gltf_model);
     void FetchTextures(ID3D11Device* device, const tinygltf::Model& gltf_model);
-
-public:
-    static const size_t PRIMITIVE_MAX_JOINTS = 512;
-    struct PrimitiveJointConstants
-    {
-        DirectX::XMFLOAT4X4 matrices[PRIMITIVE_MAX_JOINTS];
-    };
 
 private:
     void CreateAndUploadResources(ID3D11Device* device);

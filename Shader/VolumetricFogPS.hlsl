@@ -1,6 +1,5 @@
 #include "FullScreenQuad.hlsli"
 #include "Constants.hlsli"
-#include "Lights.hlsli"
 #include "Sampler.hlsli"
 
 Texture2D depthTexture : register(t0);
@@ -135,7 +134,6 @@ float DitheredRayMarch(float2 screenPos, float3 rayStart, float3 rayDir, float r
         currentPosition += step;
     }
     
-    const float cosAngle = dot(normalize(lightDirection.xyz), -rayDir);
     // MieéUóêï‚ê≥
     return accumulatedRadiance;
 }

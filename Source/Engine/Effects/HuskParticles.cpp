@@ -1,9 +1,6 @@
 #include "pch.h"
 #include "HuskParticles.h"
 
-#ifdef _DEBUG
-#include <limits>
-#endif
 #include "Graphics/Core/Shader.h"
 #include "Engine/Utility/Win32Utils.h"
 
@@ -215,64 +212,7 @@ void HuskParticles::AccumulateHuskParticles(ID3D11DeviceContext* immediateContex
     immediateContext->Unmap(particleCountReadbackBuffer.Get(), 0);
 
     particleData.particleCount = count;
-#ifdef _DEBUG
-    MeasureCapturedWorldX(immediateContext, count);
-#endif
-
     if (viewportCount > 0)
         immediateContext->RSSetViewports(viewportCount, cachedViewports);
 }
 
-#ifdef _DEBUG
-void HuskParticles::MeasureCapturedWorldX(ID3D11DeviceContext* context, UINT count)
-{
-    capturedX = {};
-    capturedX.attempted = true;
-    capturedX.particleCount = count;
-    if (count == 0) return;
-    if (count > maxParticleCount)
-    {
-        capturedX.result = E_INVALIDARG;
-        return;
-    }
-
-    D3D11_BUFFER_DESC desc{};
-    desc.ByteWidth = static_cast<UINT>(sizeof(Particle) * count);
-    desc.Usage = D3D11_USAGE_STAGING;
-    desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-    Microsoft::WRL::ComPtr<ID3D11Device> device;
-    context->GetDevice(device.GetAddressOf());
-    Microsoft::WRL::ComPtr<ID3D11Buffer> readback;
-    capturedX.result = device->CreateBuffer(&desc, nullptr, readback.GetAddressOf());
-    if (FAILED(capturedX.result)) return;
-
-    const D3D11_BOX region{ 0, 0, 0, desc.ByteWidth, 1, 1 };
-    context->CopySubresourceRegion(readback.Get(), 0, 0, 0, 0, particleBuffer.Get(), 0, &region);
-    D3D11_MAPPED_SUBRESOURCE mapped{};
-    capturedX.result = context->Map(readback.Get(), 0, D3D11_MAP_READ, 0, &mapped);
-    if (FAILED(capturedX.result)) return;
-
-    const auto* particles = static_cast<const Particle*>(mapped.pData);
-    float minimum = (std::numeric_limits<float>::max)();
-    float maximum = (std::numeric_limits<float>::lowest)();
-    for (UINT i = 0; i < count; ++i)
-    {
-        const float x = particles[i].position.x;
-        if (!std::isfinite(x))
-        {
-            ++capturedX.nonFiniteCount;
-            continue;
-        }
-        minimum = (std::min)(minimum, x);
-        maximum = (std::max)(maximum, x);
-    }
-    context->Unmap(readback.Get(), 0);
-
-    capturedX.valid = capturedX.nonFiniteCount < count;
-    if (capturedX.valid)
-    {
-        capturedX.minimum = minimum;
-        capturedX.maximum = maximum;
-    }
-}
-#endif
