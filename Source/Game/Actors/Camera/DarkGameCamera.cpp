@@ -112,7 +112,7 @@ void DarkCameraActor::UpdateCameraPose(float deltaTime, const DirectX::XMFLOAT3&
 
     if (!preservePrisonOpeningReturnPose)
     {
-        UpdateCombatPresentation(deltaTime);
+        UpdateCombatPresentation();
         compositionLookTarget = currentPose.target;
     }
 }
@@ -356,7 +356,7 @@ void DarkCameraActor::UpdateOffscreenAttackAssist(const float deltaTime)
         CancelOffscreenAttackAssist();
 }
 
-// ブレンドを開始する
+// 死亡カメラへの遷移を開始する
 void DarkCameraActor::StartDeathMode(const std::shared_ptr<GruxEnemy>& boss, std::function<void()> onBlendFinished)
 {
     deathBoss = boss;
@@ -591,7 +591,6 @@ void DarkCameraActor::StartExternalBlend(const CameraPose& start, const CameraPo
     this->finishedExternalBlend = finishExternalBlend;
 }
 
-// ムービーカメラコンポーネントからカメラポーズを作成する
 void DarkCameraActor::CancelExternalBlend()
 {
     isExternalBlending = false;
@@ -984,7 +983,6 @@ void DarkCameraActor::UpdateDesiredRotation(float deltaTime)
         break;
     }
 
-    // 
     desiredPitch = std::clamp(desiredPitch, DirectX::XMConvertToRadians(minPitchDegree), DirectX::XMConvertToRadians(maxPitchDegree));
     desiredYaw = MathHelper::ClampAngle(desiredYaw);
 }
@@ -1302,7 +1300,6 @@ void DarkCameraActor::UpdateLockOnWallLateralEscape(float deltaTime)
 {
     struct Candidate
     {
-        const char* name = "None";
         int side = 0;
         float distance = 0.0f;
         float requiredFov = 45.0f;
@@ -1348,13 +1345,13 @@ void DarkCameraActor::UpdateLockOnWallLateralEscape(float deltaTime)
             lockOnWallEscapeCurrentRequiredFov >=
             lockOnWallEscapeSevereFovThreshold);
 
-    Candidate leftNear{ "Left Near", -1,
+    Candidate leftNear{ -1,
         (std::max)(lockOnWallEscapeNearOffset, 0.0f) };
-    Candidate leftFar{ "Left Far", -1,
+    Candidate leftFar{ -1,
         (std::max)(lockOnWallEscapeFarOffset, 0.0f) };
-    Candidate rightNear{ "Right Near", 1,
+    Candidate rightNear{ 1,
         (std::max)(lockOnWallEscapeNearOffset, 0.0f) };
-    Candidate rightFar{ "Right Far", 1,
+    Candidate rightFar{ 1,
         (std::max)(lockOnWallEscapeFarOffset, 0.0f) };
 
     const auto evaluateCandidate = [&](Candidate& candidate)
@@ -1480,7 +1477,7 @@ void DarkCameraActor::UpdateLockOnWallLateralEscape(float deltaTime)
     }
 }
 
-void DarkCameraActor::UpdateCombatPresentation(float deltaTime)
+void DarkCameraActor::UpdateCombatPresentation()
 {
     const auto head = playerHead.lock();
     const auto* player = head ? dynamic_cast<const Player*>(head->GetOwner()) : nullptr;
@@ -1535,9 +1532,9 @@ void DarkCameraActor::UpdateCombatPresentation(float deltaTime)
         }
     }
     if (combatPresentationBlend > FLT_EPSILON && head)
-        ApplyCombatPresentationPose(head->GetComponentLocation());
+        ApplyCombatPresentationPose();
 }
-void DarkCameraActor::ApplyCombatPresentationPose(const DirectX::XMFLOAT3&)
+void DarkCameraActor::ApplyCombatPresentationPose()
 {
     const CameraPose base = currentPose;
     const auto smoothStep = [](float value)
@@ -1751,9 +1748,9 @@ void DarkCameraActor::UpdateLockOnCompositionLookCorrection(
     compositionRequiredFovAfter = EvaluateRequiredLockOnFovFromEye(
         currentPose.eye, compositionLookTarget, afterDiagnostics, afterValid);
 
-    recoveryCandidateValid = false;
-    recoveryBaseRequiredFov = compositionRequiredFovAfter;
-    recoveryFinalRequiredFov = compositionRequiredFovAfter;
+    bool recoveryCandidateValid = false;
+    const float recoveryBaseRequiredFov = compositionRequiredFovAfter;
+    float recoveryFinalRequiredFov = compositionRequiredFovAfter;
 
     const bool recoveryEligible = currentMode == CameraMode::LockOn &&
         !isBlending && !isExternalBlending && cameraHitWall &&

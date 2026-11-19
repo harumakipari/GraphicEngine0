@@ -2,7 +2,6 @@
 #include <DirectXMath.h>
 
 #include "Core/Actor.h"
-#include "Core/ActorManager.h"
 
 #include "Components/Camera/CameraComponent.h"
 #include "Components/CollisionShape/ShapeComponent.h"

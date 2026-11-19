@@ -331,8 +331,8 @@ private:
         DirectX::XMFLOAT3& outResolvedEye,
         bool& outCollisionHit) const;
     void UpdateLockOnFovFallback(float deltaTime);
-    void UpdateCombatPresentation(float deltaTime);
-    void ApplyCombatPresentationPose(const DirectX::XMFLOAT3&);
+    void UpdateCombatPresentation();
+    void ApplyCombatPresentationPose();
     void ApplyCombatPresentationFov();
 
     // LockOn開始時に前回の適応値を持ち越さない
@@ -479,9 +479,6 @@ private:
     float recoveryMoveSpeed = 3.0f;
     float recoveryReturnSpeed = 2.0f;
     float recoveryFovImprovementThreshold = 5.0f;
-    bool recoveryCandidateValid = false;
-    float recoveryBaseRequiredFov = 0.0f;
-    float recoveryFinalRequiredFov = 0.0f;
     bool compositionPlayerInsideSafeFrame = false;
     bool compositionBossInsideSafeFrame = false;
     bool compositionPlayerInFront = false;

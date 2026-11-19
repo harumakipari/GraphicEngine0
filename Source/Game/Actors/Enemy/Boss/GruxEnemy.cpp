@@ -1205,7 +1205,6 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         activeHitBoxNotifyStates.push_back(&state);
         if (state.parameter == rightWeapon || state.parameter == bothWeapon)
         {
-            Logger::Log(U8("右の当たり判定を開始しました"));
             const WeaponHitBoxPoints points = BuildWeaponHitBoxPoints(weaponRightRootComponent, weaponRightMiddleComponent, weaponRightTipComponent, state.hitBoxOffset);
             prevWeaponRightRootPos = points.root;
             prevWeaponRightMidPos = points.middle;
@@ -1216,7 +1215,6 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         }
         if (state.parameter == leftWeapon || state.parameter == bothWeapon)
         {
-            Logger::Log(U8("左の当たり判定を開始しました"));
             const WeaponHitBoxPoints points = BuildWeaponHitBoxPoints(weaponLeftRootComponent, weaponLeftMiddleComponent, weaponLeftTipComponent, state.hitBoxOffset);
             prevWeaponLeftRootPos = points.root;
             prevWeaponLeftMidPos = points.middle;
@@ -1228,13 +1226,11 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         RefreshActiveHitBoxesFromNotifyStates();
         break;
     case AnimationNotifyState::Type::InputWindow:
-        Logger::Log(U8("コンボ受付を開始しました"));
         break;
     case AnimationNotifyState::Type::Invincible:
         break;
     case AnimationNotifyState::Type::TransitionWindow:
         transitionWindow = true;
-        Logger::Log(U8("遷移許可区間を開始しました"));
         break;
     case AnimationNotifyState::Type::JustDodgeWindow:
         break;
@@ -1316,7 +1312,6 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
         activeHitBoxNotifyStates.erase(
             std::remove(activeHitBoxNotifyStates.begin(), activeHitBoxNotifyStates.end(), &state),
             activeHitBoxNotifyStates.end());
-        Logger::Log(U8("当たり判定を終了しました"));
         if (state.parameter == rightWeapon || state.parameter == bothWeapon)
         {
             rightHitBox = false;
@@ -1330,13 +1325,11 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
         RefreshActiveHitBoxesFromNotifyStates();
         break;
     case AnimationNotifyState::Type::InputWindow:
-        Logger::Log(U8("コンボ受付を終了しました"));
         break;
     case AnimationNotifyState::Type::Invincible:
         break;
     case AnimationNotifyState::Type::TransitionWindow:
         transitionWindow = false;
-        Logger::Log(U8("遷移許可区間を終了しました"));
         break;
     case AnimationNotifyState::Type::JustDodgeWindow:
         break;
@@ -2766,8 +2759,6 @@ bool GruxEnemy::BeginChargeAttackMovement()
     if (!context.valid)
     {
         chargeEndReason = ChargeAttackEndReason::SafetyTimeout;
-        Logger::Warning(Logger::LogCategory::Gameplay,
-            "[BossCharge][StartFailed] reason=InvalidTarget");
         return false;
     }
 
@@ -2825,7 +2816,6 @@ bool GruxEnemy::LockChargeDirectionToPlayer()
     if (!context.valid)
     {
         chargeEndReason = ChargeAttackEndReason::SafetyTimeout;
-        Logger::Warning(Logger::LogCategory::Gameplay, "[BossCharge][DirectionLockFailed] reason=InvalidTarget");
         return false;
     }
     chargeDirection = context.directionToPlayer;
@@ -2834,7 +2824,6 @@ bool GruxEnemy::LockChargeDirectionToPlayer()
     if (directionLength <= FLT_EPSILON)
     {
         chargeEndReason = ChargeAttackEndReason::SafetyTimeout;
-        Logger::Warning(Logger::LogCategory::Gameplay, "[BossCharge][DirectionLockFailed] reason=ZeroDirection");
         return false;
     }
     chargeDirection.x /= directionLength;
@@ -2991,8 +2980,6 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
     if (chargeElapsedTime >= chargeSafetyTimeout)
     {
         chargeEndReason = ChargeAttackEndReason::SafetyTimeout;
-        const std::string timeoutMessage = "[BossCharge][End] reason=SafetyTimeout elapsed=" + std::to_string(chargeElapsedTime);
-        Logger::Warning(Logger::LogCategory::Gameplay, timeoutMessage.c_str());
         StopChargeAttackMovement();
         return chargeEndReason;
     }
@@ -3721,7 +3708,6 @@ void GruxEnemy::UpdateWeaponHitDetection()
             {
                 if (!hitActors.contains(hit.actor) && !HasJustDodgedAttack(hit.actor))
                 {
-                    Logger::Log(U8("剣にプレイヤーが当たった"));
                     if (player->TryTakeDamage(GetDamageForCurrentAttack(), GetPosition()))
                     {
                         hitActors.emplace(player);
@@ -3766,7 +3752,6 @@ void GruxEnemy::UpdateWeaponHitDetection()
             {
                 if (!hitActors.contains(hit.actor) && !HasJustDodgedAttack(hit.actor))
                 {
-                    Logger::Log(U8("剣にプレイヤーが当たった"));
                     if (player->TryTakeDamage(GetDamageForCurrentAttack(), GetPosition()))
                     {
                         hitActors.emplace(player);

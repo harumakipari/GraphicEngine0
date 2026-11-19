@@ -844,6 +844,11 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
     {
         ID3D11ShaderResourceView* opacityTexture = nullptr;
         hr = LoadTextureFromFile(device, opacityTexturePath.wstring().c_str(), &opacityTexture, nullptr);
+        if (SUCCEEDED(hr) && opacityTexture)
+        {
+            clothOpacityTextureSRV.Attach(opacityTexture);
+            clothOpacityTextureLoaded = true;
+        }
     }
     else
     {

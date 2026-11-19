@@ -121,7 +121,6 @@ struct BossPositioningData
 struct BossAttackData
 {
     BossAttackType type = BossAttackType::PrimaryAttackLA;
-    std::string animationName;
     float minDistance = 0.0f;
     float maxDistance = 0.0f;
     float weight = 1.0f;

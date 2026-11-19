@@ -2,7 +2,6 @@
 #include <algorithm>
 #include <memory>
 #include <array>
-#include <cstdint>
 #include <functional>
 #include <string>
 #include <vector>
@@ -144,7 +143,6 @@ public:
 
     void OnAnimationEditorPreviewEvent(const AnimationNotifyEvent& event) override;
     void DrawAnimationEditorPreviewState(const AnimationNotifyState& state) override;
-
     void OnAnimationChanged() override;
 
     void UpdateLocomotionAnimation() override;

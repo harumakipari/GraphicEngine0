@@ -1600,12 +1600,12 @@ private:
 	// 共通の攻撃・Positioning設定
 	std::array<BossAttackData, 6> combatAttackData =  // 攻撃の設定データ。
 	{ {
-		{ BossAttackType::PrimaryAttackLA, "PrimaryAttack_LA", 0.0f, 5.0f, 1.0f, 1.25f, 5 },
-		{ BossAttackType::PrimaryAttackRA, "PrimaryAttack_RA", 0.0f, 5.0f, 1.0f, 1.30f, 5 },
-		{ BossAttackType::FastCombo, "FastCombo", 0.0f, 6.0f, 1.0f, 2.0f, 4 },
-		{ BossAttackType::JumpAttack, "PrimaryAttack_JumpAttack", 4.5f, 12.0f, 1.0f, 2.80f, 4 },
-		{ BossAttackType::DashAttack, "Stampede_0 > Stampede_Knockup_0", 6.0f, 100.0f, 1.0f, 1.20f, 6 },
-		{ BossAttackType::ChargeAttack, "Pre_FootSlide_0 > Stampede_0", 6.0f, 100.0f, 1.0f, 0.1f, 10 },
+		{ BossAttackType::PrimaryAttackLA, 0.0f, 5.0f, 1.0f, 1.25f, 5 },
+		{ BossAttackType::PrimaryAttackRA, 0.0f, 5.0f, 1.0f, 1.30f, 5 },
+		{ BossAttackType::FastCombo, 0.0f, 6.0f, 1.0f, 2.0f, 4 },
+		{ BossAttackType::JumpAttack, 4.5f, 12.0f, 1.0f, 2.80f, 4 },
+		{ BossAttackType::DashAttack, 6.0f, 100.0f, 1.0f, 1.20f, 6 },
+		{ BossAttackType::ChargeAttack, 6.0f, 100.0f, 1.0f, 0.1f, 10 },
 	} };
 
 	std::array<BossPositioningData, 4> combatPositioningData =  // 位置調整の設定データ。
@@ -1937,6 +1937,5 @@ private:
 	float fastComboApproachRetryCooldown = 2.0f;  // 接近失敗後の再試行待ち時間。
 	float fastComboApproachRetryRemaining = 0.0f;  // 接近失敗後の残り再試行待ち時間。
 	float behaviorIdleDuration = 1.0f;  // BTの通常Idle時間。
-
 };
 
