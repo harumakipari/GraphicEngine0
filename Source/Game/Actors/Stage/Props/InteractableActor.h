@@ -64,6 +64,4 @@ protected:
 
     std::shared_ptr<UIImageComponent> interactUiComponent;  
     std::shared_ptr<Sprite> controlButton;
-    std::shared_ptr<Sprite> keyboardButton;
-
 };

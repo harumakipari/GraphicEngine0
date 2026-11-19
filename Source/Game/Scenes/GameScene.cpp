@@ -340,8 +340,7 @@ void GameScene::Update(float deltaTime)
         InputSystem::SetCursorVisible(true);
     }
 
-#if 0
-
+#if _DEBUG
     if (InputSystem::GetInputState("2", InputStateMask::Trigger))
     {
         auto& shader = Scene::GetCurrentScene()->GetSceneSettings().sceneShaderConstants;
@@ -377,10 +376,7 @@ void GameScene::Update(float deltaTime)
         savedState.ApplyScenePreset(Scene::GetCurrentScene());
     }
 
-#endif // 0
-
-
-
+#endif //_DEBUG
 
 #endif // !USE_IMGUI
 
@@ -480,36 +476,6 @@ void GameScene::SetUpActors()
         darkClothActors[9] = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr9);
     }
 
-
-#if 0
-    {// ƒƒCƒ“‚Ì•”‰®‚ÌŠG‰æ‚ð¶¬‚·‚é
-        DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-        Transform paintingTr{ pos,point.worldRotation,point.worldScale };
-        auto paintingActor = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStagePaintingActor>("PaintingActor", paintingTr);
-    }
-    // ˜S‰®‚Ì•”‰®‚ÌŠG‰æ
-    {
-        Transform paintingTr{ DirectX::XMFLOAT3{-67.42f,4.2f,17.26f},DirectX::XMFLOAT3{0.0f,180.0f,0.0f},DirectX::XMFLOAT3{0.81f,1.0f,0.81f } };
-        auto paintingActor = GetActorManager()->CreateAndRegisterActorWithTransform<DarkStagePaintingActor>("JailPaintingActor", paintingTr);
-        paintingActor->SetType(DarkStagePaintingActor::PaintType::JailRoom);
-    }
-
-    // ƒƒCƒ“‚Ì•”‚ÌŠG‰æ
-    {
-        Transform paintingMainRoomTr{ DirectX::XMFLOAT3{-18.1f,3.5f,16.9f},DirectX::XMFLOAT3{0.0f,180.0f,0.0f},DirectX::XMFLOAT3{1.0f,1.0f,1.0f } };
-        auto paintingActor = GetActorManager()->CreateAndRegisterActorWithTransform<DarkStagePaintingActor>("MainPaintingActor", paintingMainRoomTr);
-        paintingActor->SetType(DarkStagePaintingActor::PaintType::MainRoom);
-
-    }
-
-    // ’Ê˜H‚ÌŠG‰æ
-    {
-        Transform paintingTr{ DirectX::XMFLOAT3{-28.f,4.262f,-2.796f},DirectX::XMFLOAT3{0.0f,0.0f,0.0f},DirectX::XMFLOAT3{0.69f,0.69f,0.69f } };
-        auto paintingActor = GetActorManager()->CreateAndRegisterActorWithTransform<DarkStagePaintingActor>("HallWayPaintingActor", paintingTr);
-        paintingActor->SetType(DarkStagePaintingActor::PaintType::Hallway);
-    }
-
-#endif // 0
     // ƒ{ƒX¶¬
     Transform GruxEnemyTr(DirectX::XMFLOAT3{ 7.69f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.7f,1.7f,1.7f });
     gruxEnemyActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemy>("GruxEnemy", GruxEnemyTr);
@@ -530,7 +496,7 @@ void GameScene::SetUpActors()
         tutorialPassiveSkeletonActor->SetSwordVisible(false);
 
         // ƒWƒƒƒXƒg‰ñ”ð‚ÌŠ[œ
-        Transform dodgeTransform(DirectX::XMFLOAT3{ -15.1f,-0.3f,10.75f }, DirectX::XMFLOAT3{ 0.0f,-140.0f,0.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
+        Transform dodgeTransform(DirectX::XMFLOAT3{ -10.5f,-0.3f,10.75f }, DirectX::XMFLOAT3{ 0.0f,-140.0f,0.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
         tutorialDodgeSkeletonActor = GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>("TutorialDodgeSkeleton", dodgeTransform);
         tutorialDodgeSkeletonActor->SetMaxHp(17);
         tutorialDodgeSkeletonActor->SetTutorialAttackHighlightEnabled(true);
@@ -1817,14 +1783,12 @@ void GameScene::UpdatePhase2Cinematic()
 
     case Phase2TransitionStep::PlayerEmotePostWait:
     {
-        // No controller update or animation request while the Emote_Win endpoint pose is held.
         const float waitDuration = std::clamp(phase2PlayerEmotePostWaitDuration, 0.0f, 3.0f);
         phase2StepElapsed = (std::min)(waitDuration,
             phase2StepElapsed + Time::UnscaledDeltaTime());
         if (phase2StepElapsed < waitDuration)
             break;
 
-        // Starting Idle releases SetPlaybackRange only after the hold has completed.
         phase2TransitionController->FinishPlayerEmote(player.get());
         BeginPhase2TpsReturnBlend();
         break;

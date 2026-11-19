@@ -30,13 +30,10 @@ void Player::Initialize(const Transform& transform)
     delayedHpDelayTimer = 0.0f;
 
     std::string parentName = "skeletalComponent";
-
-    // モデルとアニメーション生成する
     InitializeSkeletalMeshAndAnimations(parentName);
 
     {
         PROFILE_SCOPE("Create PlayerStateMachine");
-        // ステートマシンを作成
         stateMachine = std::make_shared<StateMachine>();
         stateMachine->RegisterState(std::make_unique<PlayerIdleState>(this));
         stateMachine->RegisterState(std::make_unique<PlayerRunningState>(this));
@@ -48,8 +45,6 @@ void Player::Initialize(const Transform& transform)
         stateMachine->RegisterState(std::make_unique<PlayerDeathState>(this));
         stateMachine->RegisterState(std::make_unique<PlayerWinState>(this));
         stateMachine->RegisterState(std::make_unique<PlayerRushState>(this));
-
-        // 初期ステートを設定
         stateMachine->ChangeState("Idle");
     }
 
@@ -246,7 +241,6 @@ void Player::InitializeSkeletalMeshAndAnimations(const std::string& parentName)
 
     controller->AddLocomotionBlendAnimation("Jog_Fwd", 0.0f, 0.0f);
     controller->AddLocomotionBlendAnimation("Jog_Right", 90.0f, 0.464f);
-    controller->AddLocomotionBlendAnimation("Jog_Bwd", 180.0f, 0.0f);
     controller->AddLocomotionBlendAnimation("Jog_Left", -90.0f, 0.5f);
 
     std::string name = GetName();
@@ -659,8 +653,8 @@ void Player::DrawImGuiDetails()
         }
         if (ImGui::TreeNode(U8("ヒットストップ")))
         {
-            ImGui::DragFloat(U8("ヒットストップの時間"), &normalAttackHitStopDuration, 0.01f);
-            ImGui::DragFloat(U8("ラッシュ時のヒットストップの時間"), &rushHitStopDuration, 0.005f, 0.0f, 0.8f, "%.3f sec");
+            ImGui::DragFloat(U8("ヒットストップの時間"), &normalAttackHitStopDuration, 0.01f, 0.0f, 0.8f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::DragFloat(U8("ラッシュ時のヒットストップの時間"), &rushHitStopDuration, 0.005f, 0.0f, 0.8f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
             ImGui::TreePop();
         }
         if (ImGui::TreeNode(U8("ノックバック")))
@@ -709,7 +703,7 @@ void Player::DrawImGuiDetails()
             ImGui::DragFloat(U8("被ダメージ発光時間（秒）"), &damageFlashDuration, 0.01f, 0.01f, 1.0f, "%.2f sec");
             ImGui::DragFloat(U8(" 被ダメージ本体色強度 "), &damageFlashBodyTintStrength, 0.01f, 0.0f, 1.0f, "%.2f");
             ImGui::DragFloat(U8("被ダメージリム光強度"), &damageFlashRimStrength, 0.05f, 0.0f, 10.0f, "%.2f");
-            ImGui::ColorEdit4(U8("被ダメージ本体色"), &damageFlashColor.x);
+            ImGui::ColorEdit3(U8("被ダメージ本体色"), &damageFlashColor.x);
             ImGui::TreePop();
         }
         if (ImGui::TreeNode(U8("剣の軌跡と残像")))
@@ -823,19 +817,15 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         break;
     }
     case AnimationNotifyState::Type::InputWindow:
-        // 入力受付を開始
         inputWindow = true;
         break;
     case AnimationNotifyState::Type::Invincible:
-        // 無敵状態を開始
         invincibleWindow = true;
         break;
     case AnimationNotifyState::Type::TransitionWindow:
-        // 遷移許可区間を開始
         transitionWindow = true;
         break;
     case AnimationNotifyState::Type::JustDodgeWindow:
-        // ジャスト回避許可区間を開始
         justDodgeWindow = true;
         break;
     case AnimationNotifyState::Type::DangerWindow:
@@ -855,6 +845,9 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationY(radianAngle);
         DirectX::XMVECTOR dir = DirectX::XMLoadFloat3(&localDirection);
         dir = DirectX::XMVector3TransformNormal(dir, rotation);
+        const float directionLengthSq = DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(dir));
+        if (!std::isfinite(directionLengthSq) || directionLengthSq <= FLT_EPSILON)
+            break;
         dir = DirectX::XMVector3Normalize(dir);
         DirectX::XMFLOAT3 direction;
         DirectX::XMStoreFloat3(&direction, dir);
@@ -915,19 +908,15 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
         activeHitBoxOffset = {};
         break;
     case AnimationNotifyState::Type::InputWindow:
-        // 入力受付を終了
         inputWindow = false;
         break;
     case AnimationNotifyState::Type::Invincible:
-        // 無敵状態を終了
         invincibleWindow = false;
         break;
     case AnimationNotifyState::Type::TransitionWindow:
-        // 遷移許可区間を終了
         transitionWindow = false;
         break;
     case AnimationNotifyState::Type::JustDodgeWindow:
-        // ジャスト回避許可区間を終了
         justDodgeWindow = false;
         break;
     case AnimationNotifyState::Type::DangerWindow:
@@ -1015,14 +1004,14 @@ void Player::DrawAnimationEditorPreviewState(const AnimationNotifyState& state)
 void Player::OnAnimationChanged()
 {
     animationMotionWarps.clear();
-    transitionWindow = false;  // ステート遷移してもいいかどうか
-    comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
-    inputWindow = false;   // コンボ受付をするかどうか
-    hitBox = false;     // 当たり判定
+    transitionWindow = false;
+    comboQueued = false;
+    inputWindow = false;
+    hitBox = false;
     activeHitBoxOffset = {};
-    justDodgeWindow = false;    // ジャスト回避を受け付けるかどうか
-    invincibleWindow = false;   // 無敵状態かどうか
-    justDodgeSuccess = false; // ジャスト回避が成功したかどうか
+    justDodgeWindow = false;
+    invincibleWindow = false;
+    justDodgeSuccess = false;
     showTrail = false;
     swordEmissivePower = 0.0f;
     hitActors.clear();
@@ -1373,7 +1362,10 @@ void Player::SetOperationGuideHudVisible(const bool visible)
 
 void Player::SetOperationGuideItemVisible(const OperationGuideItem item, const bool visible)
 {
-    auto& state = operationGuideItems[static_cast<size_t>(item)];
+    const size_t index = static_cast<size_t>(item);
+    if (index >= operationGuideItems.size())
+        return;
+    auto& state = operationGuideItems[index];
     state.visible = visible;
     if (!visible)
         state.animationTimer = 0.0f;
@@ -1382,19 +1374,28 @@ void Player::SetOperationGuideItemVisible(const OperationGuideItem item, const b
 
 void Player::SetOperationGuideItemLearned(const OperationGuideItem item)
 {
-    auto& state = operationGuideItems[static_cast<size_t>(item)];
+    const size_t index = static_cast<size_t>(item);
+    if (index >= operationGuideItems.size())
+        return;
+    auto& state = operationGuideItems[index];
     state.learned = true;
     state.animationTimer = 0.0f;
 }
 
 bool Player::IsOperationGuideItemVisible(const OperationGuideItem item) const
 {
-    return operationGuideItems[static_cast<size_t>(item)].visible;
+    const size_t index = static_cast<size_t>(item);
+    if (index >= operationGuideItems.size())
+        return false;
+    return operationGuideItems[index].visible;
 }
 
 bool Player::IsOperationGuideItemLearned(const OperationGuideItem item) const
 {
-    return operationGuideItems[static_cast<size_t>(item)].learned;
+    const size_t index = static_cast<size_t>(item);
+    if (index >= operationGuideItems.size())
+        return false;
+    return operationGuideItems[index].learned;
 }
 
 void Player::SetMinimumHp(const int value)
@@ -2577,8 +2578,9 @@ void Player::UpdateSwordHitDetection(const DirectX::XMFLOAT3& playerPos, const D
                         enemy->SpawnRushHitRing(hit.hitPoint, hit.normal, playerPos,
                             hit.hasPosition, hit.hasNormal);
                     }
-                    Time::SetSlow(0.0f,
-                        isRushHit ? rushHitStopDuration : normalAttackHitStopDuration);
+                    const float hitStopDuration = isRushHit ? rushHitStopDuration : normalAttackHitStopDuration;
+                    if (std::isfinite(hitStopDuration) && hitStopDuration > 0.0f)
+                        Time::SetSlow(0.0f, hitStopDuration);
                     if (lethalHit && finalHitCallback)
                     {
                         finalHitCallback(enemy, GetPosition());
@@ -2596,7 +2598,9 @@ void Player::UpdateSwordHitDetection(const DirectX::XMFLOAT3& playerPos, const D
                         enemy->SpawnPlayerRushHitEffect(hit.hitPoint, hit.normal, playerPos,
                             hit.hasPosition, hit.hasNormal);
                     }
-                    Time::SetSlow(0.0f, isRushHit ? rushHitStopDuration : normalAttackHitStopDuration);
+                    const float hitStopDuration = isRushHit ? rushHitStopDuration : normalAttackHitStopDuration;
+                    if (std::isfinite(hitStopDuration) && hitStopDuration > 0.0f)
+                        Time::SetSlow(0.0f, hitStopDuration);
                 }
             }
         }
@@ -2734,7 +2738,6 @@ void Player::UpdateMovement()
             float newLength =
                 (clampedLength - deadZone) / (1.0f - deadZone);
             processedMagnitude = newLength;
-            // 好みでコメントアウトを切り替え
             moveStickX = moveStickX / rawLength * newLength;
             moveStickZ = moveStickZ / rawLength * newLength;
             characterMovementComponent->SetInputMagnitude(newLength);
@@ -2897,7 +2900,7 @@ void Player::UpdateSwordGhosts(const float deltaTime)
         prevSwordWorld = currentWorld;
     }
 
-    // 剣の残像用の剣のメッシュコンポーネント
+    // 既存残像のフェードと描画定数を更新する。
     for (auto& ghost : ghosts)
     {
         ghost.alpha -= deltaTime / safeGhostFadeTime;

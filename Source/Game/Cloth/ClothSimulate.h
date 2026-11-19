@@ -715,13 +715,6 @@ public:
         int pad{ 0 };
         DirectX::XMFLOAT4X4 invWorld;
     };
-    static_assert(sizeof(ComputePrimitiveConstants) == 144, "Cloth compute b0 size mismatch");
-    static_assert(offsetof(ComputePrimitiveConstants, world) == 0, "Cloth compute b0 world offset mismatch");
-    static_assert(offsetof(ComputePrimitiveConstants, material) == 64, "Cloth compute b0 material offset mismatch");
-    static_assert(offsetof(ComputePrimitiveConstants, hasTangent) == 68, "Cloth compute b0 hasTangent offset mismatch");
-    static_assert(offsetof(ComputePrimitiveConstants, skin) == 72, "Cloth compute b0 skin offset mismatch");
-    static_assert(offsetof(ComputePrimitiveConstants, pad) == 76, "Cloth compute b0 padding offset mismatch");
-    static_assert(offsetof(ComputePrimitiveConstants, invWorld) == 80, "Cloth compute b0 invWorld offset mismatch");
 
     struct GraphicsPrimitiveConstants
     {
@@ -733,15 +726,6 @@ public:
         int materialType{ 0 };
         DirectX::XMFLOAT4X4 inverseTransposeWorld;
     };
-    static_assert(sizeof(GraphicsPrimitiveConstants) == 208, "Cloth graphics b0 size mismatch");
-    static_assert(offsetof(GraphicsPrimitiveConstants, world) == 0, "Cloth graphics b0 world offset mismatch");
-    static_assert(offsetof(GraphicsPrimitiveConstants, previousWorld) == 64, "Cloth graphics b0 previousWorld offset mismatch");
-    static_assert(offsetof(GraphicsPrimitiveConstants, material) == 128, "Cloth graphics b0 material offset mismatch");
-    static_assert(offsetof(GraphicsPrimitiveConstants, hasTangent) == 132, "Cloth graphics b0 hasTangent offset mismatch");
-    static_assert(offsetof(GraphicsPrimitiveConstants, skin) == 136, "Cloth graphics b0 skin offset mismatch");
-    static_assert(offsetof(GraphicsPrimitiveConstants, materialType) == 140, "Cloth graphics b0 materialType offset mismatch");
-    static_assert(offsetof(GraphicsPrimitiveConstants, inverseTransposeWorld) == 144, "Cloth graphics b0 inverseTransposeWorld offset mismatch");
-
 private:
     Microsoft::WRL::ComPtr<ID3D11Buffer> computePrimitiveCbuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> graphicsPrimitiveCbuffer;

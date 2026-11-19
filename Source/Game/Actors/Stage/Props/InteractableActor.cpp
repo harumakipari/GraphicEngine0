@@ -17,7 +17,6 @@ void InteractableActor::Initialize(const Transform& transform)
     uiManager->Add(interactUiComponent);
 
     controlButton = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/UI/button_a.png");
-    keyboardButton = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/UI/button_enter.png");
 }
 
 
@@ -27,11 +26,6 @@ void InteractableActor::Update(float deltaTime)
     {
         interactUiComponent->SetTexture(controlButton);
         interactUiComponent->SetScale({ 0.6f,0.6f });
-    }
-    else
-    {
-        interactUiComponent->SetTexture(keyboardButton);
-        interactUiComponent->SetScale({ 1.2f,1.2f });
     }
     const auto scene = GetOwnerScene();
     const auto cameraManager = scene->GetCameraManager();

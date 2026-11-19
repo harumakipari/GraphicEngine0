@@ -1,6 +1,11 @@
 #pragma once
+#include <algorithm>
 #include <memory>
 #include <array>
+#include <cstdint>
+#include <functional>
+#include <string>
+#include <vector>
 #include "Game/Actors/Base/Character.h"
 
 #include "Components/Controller/ControllerComponent.h"

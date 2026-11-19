@@ -171,7 +171,7 @@ private:
     {
         DXGI_FORMAT_R16G16B16A16_FLOAT, // Scene Color
         DXGI_FORMAT_R8G8B8A8_UNORM,  //  albedo Opacity + Mask
-        DXGI_FORMAT_R16G16B16A16_FLOAT, // マテリアルの情報
+        DXGI_FORMAT_R8G8B8A8_UNORM, // マテリアルの情報
         DXGI_FORMAT_R16G16B16A16_FLOAT, // Normal
         DXGI_FORMAT_R16G16B16A16_FLOAT, // emissive
         DXGI_FORMAT_R16G16B16A16_FLOAT, // Position
