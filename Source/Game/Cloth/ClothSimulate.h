@@ -30,10 +30,6 @@ public:
     ClothSimulate(ID3D11Device* device, const std::string& filename);
     virtual ~ClothSimulate() = default;
 
-private:
-    void RecreateClothBuffers(ID3D11Device* device);
-
-public:
     struct Scene
     {
         std::string name;
@@ -154,10 +150,7 @@ private:
     int maxSubsteps = 8;
     float simulationAccumulator = 0.0f;
     float simulationElapsedTime = 0.0f;
-    UINT lastExecutedSubsteps = 0;
-    bool disableCulling = false;
 
-private:
     std::vector<Node> nodes;
 
 public:
@@ -232,9 +225,6 @@ public:
                 );
             }
         };
-        static_assert(sizeof(Vertex) == 104, "Cloth Mesh::Vertex must match HLSL ClothVertex stride");
-        static_assert(offsetof(Vertex, position) == 0 && offsetof(Vertex, normal) == 12 && offsetof(Vertex, tangent) == 24 && offsetof(Vertex, texcoord) == 40, "ClothVertex prefix must match HLSL");
-        static_assert(offsetof(Vertex, velocity) == 48 && offsetof(Vertex, oldPosition) == 60 && offsetof(Vertex, oldVelocity) == 72 && offsetof(Vertex, rotation) == 84 && offsetof(Vertex, isPinned) == 100, "ClothVertex simulation fields must match HLSL");
 
         std::string name;
 
@@ -600,27 +590,6 @@ public:
 private:
     std::vector<Image> images;
     std::vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> textureResourceViews;
-
-private:
-    struct VertexDiagnostic
-    {
-        const char* label = "";
-        UINT index = 0;
-        DirectX::XMFLOAT3 position = {};
-        DirectX::XMFLOAT3 velocity = {};
-        float displacement = 0.0f;
-        bool finite = true;
-    };
-
-    void CaptureVertexDiagnostics(ID3D11DeviceContext* immediateContext);
-    void UpdateVertexDiagnosticsCapture(ID3D11DeviceContext* immediateContext);
-    int lastCopySourceBuffer = -1;
-    Microsoft::WRL::ComPtr<ID3D11Buffer> pendingReadbackBuffer;
-    Microsoft::WRL::ComPtr<ID3D11Query> pendingReadbackQuery;
-    const Mesh::Primitive* pendingReadbackPrimitive = nullptr;
-    UINT pendingReadbackSourceBuffer = 0;
-    UINT pendingReadbackPollCount = 0;
-    const Mesh::Primitive* lastSimulatedPrimitive = nullptr;
 
     void FetchNodes(const tinygltf::Model& gltf_model);
     void CumulateTransforms(std::vector<Node>& nodes) const;

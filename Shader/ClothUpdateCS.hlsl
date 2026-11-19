@@ -145,7 +145,12 @@ void main(uint3 id : SV_DispatchThreadID)
         force += forceLocal4.xyz;
         float3 currentVelocity = inVertex.velocity;
         float3 windDir = windEmitPosition - outVertex.oldPosition;
-        float4 windDirWorld = normalize(float4(windDir, 0));
+        float windDirLengthSq = dot(windDir, windDir);
+        float4 windDirWorld = float4(0.0f, 0.0f, 0.0f, 0.0f);
+        if (all(isfinite(windDir)) && isfinite(windDirLengthSq) && windDirLengthSq > 1e-12f)
+        {
+            windDirWorld = normalize(float4(windDir, 0));
+        }
         float4 windDirLocal4 = mul(windDirWorld, invWorld);
         float windVariation = windPhaseOffset;
 

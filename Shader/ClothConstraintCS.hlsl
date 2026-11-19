@@ -69,7 +69,6 @@ cbuffer SCENE_CONSTANT_BUFFER : register(b1)
     float gravity;
     float3 aaa;
     
-    //row_major float4x4 clothInvWorld;
 }
 
 cbuffer CLOTH_SIMULATE_CBUFFER : register(b10)
@@ -143,7 +142,6 @@ void main(uint3 id : SV_DispatchThreadID)
     const float thread = 0.25;
     float4 newRotation = normalize(currentRotation - rotationGrad * thread);
     outVertex.rotation = newRotation;
-    //outVertex.oldVelocity = inVertex.velocity;
     outVertex.velocity = inVertex.velocity;
     outVertex.position = inVertex.position;
     

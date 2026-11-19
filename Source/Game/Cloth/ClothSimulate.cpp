@@ -251,7 +251,7 @@ void ClothSimulate::FetchMeshes(ID3D11Device* device, const tinygltf::Model& glt
                 memcpy_s(primitive.cachedIndices.data(), primitive.cachedIndices.size(), data, primitive.indexBufferView.sizeInBytes);
             }
 
-            // インデックスバッファの作成
+            // 頂点属性の読み込み
             if (gltfPrimitive.attributes.size() > 0 && gltfPrimitive.attributes.find("POSITION") != gltfPrimitive.attributes.end())
             {
                 primitive.cachedVertices.resize(gltfModel.accessors.at(gltfPrimitive.attributes.at("POSITION")).count);
@@ -424,7 +424,6 @@ void ClothSimulate::FetchTextures(ID3D11Device* device, const tinygltf::Model& g
 
 void ClothSimulate::Update(float deltaTime)
 {
-    lastExecutedSubsteps = 0;
     if (!cbuffer || !enableClothSimulation || !std::isfinite(deltaTime))
         return;
 
@@ -433,42 +432,6 @@ void ClothSimulate::Update(float deltaTime)
     simulationAccumulator = (std::min)(simulationAccumulator + clampedFrameTime, maxAccumulatedTime);
 }
 
-
-void ClothSimulate::RecreateClothBuffers(ID3D11Device* device)
-{
-    if (!cbuffer)
-        return;
-    lastCopySourceBuffer = -1;
-    simulationAccumulator = 0.0f;
-    simulationElapsedTime = 0.0f;
-    lastExecutedSubsteps = 0;
-    pendingReadbackBuffer.Reset();
-    pendingReadbackQuery.Reset();
-    pendingReadbackPrimitive = nullptr;
-    lastSimulatedPrimitive = nullptr;
-    for (auto& mesh : meshes)
-    {
-        for (auto& primitive : mesh.primitives)
-        {
-            primitive.initialBottomWeightSRV.Reset();
-            primitive.initialBottomWeightBuffer.Reset();
-            primitive.clothEdgeBuffer.Reset();
-            primitive.clothEdgeSRV.Reset();
-            primitive.clothVB.Reset();
-            for (int i = 0; i < 2; i++)
-            {
-                primitive.clothSRV[i].Reset();
-                primitive.clothUAV[i].Reset();
-                primitive.clothBuffer[i].Reset();
-
-            }
-
-            primitive.ping = 0;
-            primitive.pong = 1;
-            primitive.CreateClothPingPongBuffers(device);
-        }
-    }
-}
 
 void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
 {
@@ -642,42 +605,7 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
                 max.z = std::max<float>(max.z, v.position.z);
             }
 
-            // 四隅の判定
-#if 0
-            for (auto& v : primitive.cachedVertices)
-            {
-                bool isCorner =
-                    (fabs(v.position.x - min.x) < 0.001f || fabs(v.position.x - max.x) < 0.001f) &&
-                    (fabs(v.position.z - min.z) < 0.001f || fabs(v.position.z - max.z) < 0.001f) &&
-                    (fabs(v.position.y - max.y) < 0.001f); // 上辺
-
-                if (isCorner)
-                {
-                    v.isPinned = 1;
-                }
-            }
-            //for (auto& v : primitive.cachedVertices)
-            //{
-            //    v.isPinned = 0; // 初期化
-            //    for (auto& pinPos : pinPositions)
-            //    {
-            //        float dx = v.position.x - pinPos.x;
-            //        float dy = v.position.y - pinPos.y;
-            //        float dz = v.position.z - pinPos.z;
-            //        float distSq = dx * dx + dy * dy + dz * dz;
-
-            //        if (distSq < pinThreshold * pinThreshold)
-            //        {
-            //            v.isPinned = 1;
-            //            break;
-            //        }
-            //    }
-            //}
-#else
-
-#if 1
             const float yThreshold = 0.0001f;
-            //const float yThreshold = 10.5f;
             for (auto& v : primitive.cachedVertices)
             {
                 if (fabs(v.position.y - max.y) < yThreshold)
@@ -689,22 +617,6 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
                     v.isPinned = 0;
                 }
             }
-
-#else
-            const float yThreshold = 0.1f;
-            for (auto& v : primitive.cachedVertices)
-            {
-                if (fabs(v.position.y - min.y) < yThreshold)
-                {
-                    v.isPinned = 1;
-                }
-                else
-                {
-                    v.isPinned = 0;
-                }
-            }
-#endif // 0
-#endif // 0
 
             uint32_t clothSeed = static_cast<uint32_t>(&primitive - &mesh.primitives[0]);
             std::mt19937 rng(clothSeed);
@@ -823,135 +735,12 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
 }
 
 
-void ClothSimulate::CaptureVertexDiagnostics(ID3D11DeviceContext* immediateContext)
-{
-    if (pendingReadbackQuery)
-    {
-        return;
-    }
-    if (!immediateContext)
-    {
-        return;
-    }
-
-    const Mesh::Primitive* primitive = lastSimulatedPrimitive;
-    if (!primitive)
-    {
-        for (const auto& mesh : meshes)
-        {
-            if (!mesh.primitives.empty())
-            {
-                primitive = &mesh.primitives.front();
-                break;
-            }
-        }
-    }
-    if (!primitive || primitive->cachedVertices.empty())
-    {
-        return;
-    }
-
-    const int sourceIndex = lastCopySourceBuffer >= 0 ? lastCopySourceBuffer : primitive->ping;
-    if (sourceIndex < 0 || sourceIndex > 1 || !primitive->clothBuffer[sourceIndex])
-    {
-        return;
-    }
-
-    D3D11_BUFFER_DESC sourceDesc = {};
-    primitive->clothBuffer[sourceIndex]->GetDesc(&sourceDesc);
-    const UINT expectedByteWidth = static_cast<UINT>(primitive->cachedVertices.size() * sizeof(Mesh::Vertex));
-    if (sourceDesc.ByteWidth != expectedByteWidth)
-    {
-        return;
-    }
-
-    D3D11_BUFFER_DESC stagingDesc = {};
-    stagingDesc.ByteWidth = sourceDesc.ByteWidth;
-    stagingDesc.Usage = D3D11_USAGE_STAGING;
-    stagingDesc.BindFlags = 0;
-    stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-    stagingDesc.MiscFlags = 0;
-    stagingDesc.StructureByteStride = 0;
-    HRESULT hr = Graphics::GetDevice()->CreateBuffer(&stagingDesc, nullptr, pendingReadbackBuffer.ReleaseAndGetAddressOf());
-    if (FAILED(hr))
-    {
-        return;
-    }
-
-    D3D11_QUERY_DESC queryDesc = { D3D11_QUERY_EVENT, 0 };
-    hr = Graphics::GetDevice()->CreateQuery(&queryDesc, pendingReadbackQuery.ReleaseAndGetAddressOf());
-    if (FAILED(hr))
-    {
-        pendingReadbackBuffer.Reset();
-        return;
-    }
-
-    pendingReadbackPrimitive = primitive;
-    pendingReadbackSourceBuffer = static_cast<UINT>(sourceIndex);
-    pendingReadbackPollCount = 0;
-    immediateContext->CopyResource(pendingReadbackBuffer.Get(), primitive->clothBuffer[sourceIndex].Get());
-    immediateContext->End(pendingReadbackQuery.Get());
-}
-
-void ClothSimulate::UpdateVertexDiagnosticsCapture(ID3D11DeviceContext* immediateContext)
-{
-    if (!pendingReadbackQuery || !pendingReadbackBuffer || !pendingReadbackPrimitive || !immediateContext)
-        return;
-
-    BOOL completed = FALSE;
-    const HRESULT hr = immediateContext->GetData(pendingReadbackQuery.Get(), &completed, sizeof(completed), D3D11_ASYNC_GETDATA_DONOTFLUSH);
-    if (hr == S_FALSE)
-    {
-        ++pendingReadbackPollCount;
-        if (pendingReadbackPollCount > 600)
-        {
-            pendingReadbackBuffer.Reset();
-            pendingReadbackQuery.Reset();
-            pendingReadbackPrimitive = nullptr;
-        }
-        return;
-    }
-    if (FAILED(hr) || !completed)
-    {
-        pendingReadbackBuffer.Reset();
-        pendingReadbackQuery.Reset();
-        pendingReadbackPrimitive = nullptr;
-        return;
-    }
-
-    D3D11_MAPPED_SUBRESOURCE mapped = {};
-    const HRESULT mapHr = immediateContext->Map(pendingReadbackBuffer.Get(), 0, D3D11_MAP_READ, 0, &mapped);
-    if (!FAILED(mapHr))
-    {
-        const Mesh::Primitive& primitive = *pendingReadbackPrimitive;
-        const Mesh::Vertex* vertices = static_cast<const Mesh::Vertex*>(mapped.pData);
-        UINT top = 0, middle = 0, bottom = 0;
-        bool foundPinnedTop = primitive.cachedVertices[top].isPinned != 0;
-        for (UINT i = 1; i < primitive.cachedVertices.size(); ++i)
-        {
-            const bool pinned = primitive.cachedVertices[i].isPinned != 0;
-            if ((pinned && (!foundPinnedTop || primitive.cachedVertices[i].position.y > primitive.cachedVertices[top].position.y)) || (!foundPinnedTop && primitive.cachedVertices[i].position.y > primitive.cachedVertices[top].position.y))
-            {
-                top = i;
-                foundPinnedTop = pinned;
-            }
-            if (primitive.cachedVertices[i].position.y < primitive.cachedVertices[bottom].position.y)
-                bottom = i;
-        }
-       
-        immediateContext->Unmap(pendingReadbackBuffer.Get(), 0);
-    }
-    pendingReadbackBuffer.Reset();
-    pendingReadbackQuery.Reset();
-    pendingReadbackPrimitive = nullptr;
-}
 void ClothSimulate::Simulate(ID3D11DeviceContext* immediateContext)
 {
     if (!cbuffer || !enableClothSimulation)
         return;
 
     const UINT substepCount = (std::min)(static_cast<UINT>(simulationAccumulator / fixedDeltaTime), static_cast<UINT>(maxSubsteps));
-    lastExecutedSubsteps = substepCount;
     if (substepCount == 0)
         return;
 
@@ -983,8 +772,6 @@ void ClothSimulate::Simulate(ID3D11DeviceContext* immediateContext)
                 int& input = primitive.ping;
                 int& output = primitive.pong;
                 const UINT threadGroupCountX = Align(static_cast<UINT>(primitive.cachedVertices.size()), NUMTHREAD_X) / NUMTHREAD_X;
-                lastSimulatedPrimitive = &primitive;
-                lastCopySourceBuffer = -1;
 
                 immediateContext->CSSetUnorderedAccessViews(0, 1, primitive.clothUAV[output].GetAddressOf(), nullptr);
                 immediateContext->CSSetShaderResources(0, 1, primitive.clothSRV[input].GetAddressOf());
@@ -1008,7 +795,6 @@ void ClothSimulate::Simulate(ID3D11DeviceContext* immediateContext)
                 immediateContext->CSSetShaderResources(0, 1, nullSRV);
                 immediateContext->CSSetShaderResources(1, 1, nullSRV);
 
-                lastCopySourceBuffer = output;
                 std::swap(input, output);
             }
         }
@@ -1028,7 +814,6 @@ void ClothSimulate::Simulate(ID3D11DeviceContext* immediateContext)
     {
         for (auto& primitive : mesh.primitives)
         {
-            lastCopySourceBuffer = primitive.ping;
             immediateContext->CopyResource(primitive.clothVB.Get(), primitive.clothBuffer[primitive.ping].Get());
         }
     }
@@ -1040,20 +825,6 @@ void ClothSimulate::Render(ID3D11DeviceContext* immediateContext, const DirectX:
 {
     if (!cbuffer || !enableClothRendering)
         return;
-    //Simulate(immediateContext);
-
-    //immediateContext->PSSetShaderResources(0, 1, materialResourceView.GetAddressOf());
-    //immediateContext->VSSetShader(vertexShader.Get(), nullptr, 0);
-    //immediateContext->PSSetShader(pixelShader.Get(), nullptr, 0);
-    //immediateContext->IASetInputLayout(inputLayout.Get());
-    //immediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-    Microsoft::WRL::ComPtr<ID3D11RasterizerState> previousRasterizerState;
-    if (disableCulling)
-    {
-        immediateContext->RSGetState(previousRasterizerState.GetAddressOf());
-        RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
-    }
     std::function<void(int)> traverse = [&](int nodeIndex)->void {
         const Node& node = nodes.at(nodeIndex);
         if (node.mesh > -1)
@@ -1064,8 +835,6 @@ void ClothSimulate::Render(ID3D11DeviceContext* immediateContext, const DirectX:
                 UINT stride = sizeof(Mesh::Vertex);
                 UINT offset = 0;
 
-                //immediateContext->IASetVertexBuffers(0, 1, clothVB[b].GetAddressOf(), &stride, &offset);
-                //immediateContext->IASetVertexBuffers(0, 1, clothVB.GetAddressOf(), &stride, &offset);
                 immediateContext->IASetVertexBuffers(0, 1, primitive.clothVB.GetAddressOf(), &stride, &offset);
 
                 ComputePrimitiveConstants computePrimitiveData = {};
@@ -1171,6 +940,4 @@ void ClothSimulate::Render(ID3D11DeviceContext* immediateContext, const DirectX:
     immediateContext->PSSetConstantBuffers(13, 1, &nullClothAlphaTestBuffer);
     ID3D11ShaderResourceView* nullClothOpacitySRV = nullptr;
     immediateContext->PSSetShaderResources(16, 1, &nullClothOpacitySRV);
-    if (disableCulling)
-        immediateContext->RSSetState(previousRasterizerState.Get());
 }
