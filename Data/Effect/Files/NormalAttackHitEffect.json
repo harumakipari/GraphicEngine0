@@ -391,7 +391,7 @@
                     0.14000000059604645
                 ]
             ],
-            "texturePath": ".\\Data\\Effect\\Textures\\particle.png",
+            "texturePath": ".\\Data\\Effect\\DarkStageParticleTex\\particle.png",
             "textureSplitCount": [
                 1,
                 1
@@ -588,7 +588,7 @@
                     1.600000023841858
                 ]
             ],
-            "texturePath": ".\\Data\\Effect\\Particles\\AuroraRing.png",
+            "texturePath": ".\\Data\\Effect\\DarkStageParticleTex\\AuroraRing.png",
             "textureSplitCount": [
                 1,
                 1

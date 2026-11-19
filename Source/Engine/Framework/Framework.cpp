@@ -58,7 +58,7 @@ bool Framework::Initialize()
 
     //パーティクルシステム
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTexture;
-    HRESULT hr = LoadTextureFromFile(device, L"./Data/Effect/Textures/particle.png", particleTexture.GetAddressOf(), NULL);
+    HRESULT hr = LoadTextureFromFile(device, L"./Data/Effect/DarkStageParticleTex/particle.png", particleTexture.GetAddressOf(), NULL);
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     particleSystem = std::make_unique<ComputeParticleSystem>(device, 30000, particleTexture);
 
