@@ -69,13 +69,12 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
-Data/Models/DarkStage0601/
+Data/Models/DarkStage/
 Data/Environment/Sky/
 Data/Models/Characters/Aurora_FrozenHealth/
 Data/Sound/
 Data/Models/DarkStageAssets/
 Data/Models/Characters/
-Data/Models/Flag/
 .vs/
 3dgp/
 git status
@@ -83,15 +82,9 @@ git status
 *.cso
 Data/Log/
 x64/
-Data/Models/DarkStage_0327_1/
-Data/Models/DarkStage0414/
-Data/Models/shrine/
-Data/Models/DarkStage0620/
 Data/Models/DarkStage_Collision/
 Data/Models/DarkStageShadowModel/
-Data/Models/TitleStage0712/
-Data/Models/ParticleMesh/Fragment/
+Data/Models/TitleStage/
 .dotnet-cli/
 Data/Models/EffectDebri/
 Data/Saves/BossBestTime.json
-Data/Models/Cloth/m_cloth_BaseColor_blue.png

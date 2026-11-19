@@ -63,15 +63,15 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
         {
             PROFILE_SCOPE("Load StageModel");
             // メインの部屋のモデル
-            mainRoomAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0620/MainRoom.gltf", ModelTypes::ModelMode::StaticMesh, false, true);
+            mainRoomAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage/MainRoom.gltf", ModelTypes::ModelMode::StaticMesh, false, true);
             mainRoomAsset->spawnPoints = mainRoomAsset->model->spawnPoints;
 
             // ボスの部屋のモデル
-            bossRoomAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0620/BossRoom.gltf", ModelTypes::ModelMode::StaticMesh, false, true);
+            bossRoomAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage/BossRoom.gltf", ModelTypes::ModelMode::StaticMesh, false, true);
             bossRoomAsset->spawnPoints = bossRoomAsset->model->spawnPoints;
 
             // ボスとメインの部屋の間モデル
-            transitionAreaAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0620/TransitionArea.gltf", ModelTypes::ModelMode::StaticMesh, false, true);
+            transitionAreaAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage/TransitionArea.gltf", ModelTypes::ModelMode::StaticMesh, false, true);
             transitionAreaAsset->spawnPoints = transitionAreaAsset->model->spawnPoints;
         });
 

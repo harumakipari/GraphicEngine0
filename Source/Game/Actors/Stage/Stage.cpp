@@ -23,7 +23,7 @@ void DarkStage::Initialize(const Transform& transform)
 	castStaticMeshComponent->SetIsVisible(false);
 
 	auto stageCollisionModel = this->AddComponent<StaticMeshComponent>("collisionModel", parentName);
-	stageCollisionModel->SetModel("./Data/Models/DarkStage_Collision/DarkStage_CollisionModel_1014.glb", true, false);
+	stageCollisionModel->SetModel("./Data/Models/DarkStage_Collision/DarkStage_CollisionModel.glb", true, false);
 	stageCollisionModel->SetIsCastShadow(false);
 	stageCollisionModel->SetIsVisible(false);
 	auto nodes = stageCollisionModel->model->GetNodes();
