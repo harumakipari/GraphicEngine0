@@ -30,14 +30,6 @@ RWStructuredBuffer<ClothVertex> outVertices : register(u0);
 #define MAX_EDGES 8
 
 
-cbuffer SPHERE_CBUFFER : register(b7)
-{
-    float3 worldPos;
-    float radius;
-    row_major float4x4 sphereWorld;
-    row_major float4x4 sphereInvWorld;
-}
-
 cbuffer PRIMITIVE_CONSTANT_BUFFER : register(b0)
 {
     row_major float4x4 world;
@@ -105,44 +97,6 @@ float4x4 LeftMultiMatrix(float4 b)
     float4(b.y, -b.x, b.w, -b.z),
     float4(b.x, b.y, b.z, b.w));
 }
-
-void CollideSphere(inout ClothVertex v)
-{
- // 球のワールド情報
-    float3 sphereCenterWorld = worldPos;
-    float sphereRadiusWorld = radius;
-    float friction = 0.4;
-    float restitution = 0.1;
-
-    // ワールド→ローカル変換
-    float4 centerLocal4 = mul(float4(sphereCenterWorld, 1.0), invWorld);
-    float3 sphereCenterLocal = centerLocal4.xyz;
-
-    // ローカルでの押し出し判定
-    float3 dir = v.position - sphereCenterLocal;
-    float dist = length(dir);
-
-    if (dist < sphereRadiusWorld)
-    {
-        float3 n = normalize(dir);
-        float penetration = sphereRadiusWorld - dist;
-        
-        // 安定化付き押し出し
-        v.position += n * penetration * 0.8;
-
-        // 速度補正
-        float vn = dot(v.velocity, n);
-        if (vn < 0.0f)
-        {
-            float3 velNormal = vn * n;
-            float3 velTangent = v.velocity - velNormal;
-
-            // restitutionとfrictionを適用
-            v.velocity = velTangent * (1.0 - friction) - velNormal * restitution;
-        }
-    }
-}
-
 
 #define NUM_THREAD_X 16
 

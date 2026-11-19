@@ -143,7 +143,6 @@ ClothSimulate::ClothSimulate(ID3D11Device* device, const std::string& filename) 
     }
 
     cbuffer = std::make_unique<ConstantBuffer<ClothSimulateCBuffer>>(device);
-    planeCBuffer = std::make_unique<ConstantBuffer<ClothPlaneCBuffer>>(device);
     clothTimeCBuffer = std::make_unique<ConstantBuffer<ClothTimeCBuffer>>(device);
     clothAlphaTestCBuffer = std::make_unique<ConstantBuffer<ClothAlphaTestCBuffer>>(device);
 
@@ -959,8 +958,6 @@ void ClothSimulate::Simulate(ID3D11DeviceContext* immediateContext)
     ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
     ID3D11UnorderedAccessView* nullUAV = {};
     ID3D11Buffer* nullBuffer = nullptr;
-    ID3D11Buffer* planeBuffer = planeCBuffer->GetBuffer();
-    immediateContext->UpdateSubresource(planeBuffer, 0, nullptr, &planeCBuffer->data, 0, 0);
 
     for (UINT substep = 0; substep < substepCount; ++substep)
     {
@@ -994,7 +991,6 @@ void ClothSimulate::Simulate(ID3D11DeviceContext* immediateContext)
                 immediateContext->CSSetShaderResources(1, 1, primitive.clothEdgeSRV.GetAddressOf());
                 immediateContext->CSSetShaderResources(2, 1, primitive.initialBottomWeightSRV.GetAddressOf());
                 immediateContext->CSSetShader(clothUpdateCS.Get(), nullptr, 0);
-                immediateContext->CSSetConstantBuffers(6, 1, &planeBuffer);
                 immediateContext->Dispatch(threadGroupCountX, 1, 1);
                 immediateContext->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
                 immediateContext->CSSetShaderResources(0, 1, nullSRV);
@@ -1025,7 +1021,6 @@ void ClothSimulate::Simulate(ID3D11DeviceContext* immediateContext)
     immediateContext->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
     immediateContext->CSSetShader(nullptr, nullptr, 0);
     immediateContext->CSSetConstantBuffers(0, 1, &nullBuffer);
-    immediateContext->CSSetConstantBuffers(6, 1, &nullBuffer);
     immediateContext->CSSetConstantBuffers(10, 1, &nullBuffer);
     immediateContext->CSSetConstantBuffers(11, 1, &nullBuffer);
 

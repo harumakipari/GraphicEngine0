@@ -132,18 +132,6 @@ private:
     bool clothOpacityTextureLoaded = false;
     bool enableAlphaTest = true;
     float alphaThreshold = 0.5f;
-public:
-    struct ClothPlane
-    {
-        DirectX::XMFLOAT3 normal = { 0.0f, 1.0f, 0.0f };
-        float d = 0.0f;
-    };
-    struct ClothPlaneCBuffer
-    {
-        ClothPlane planes[4];
-    };
-private:
-    std::unique_ptr<ConstantBuffer<ClothPlaneCBuffer>> planeCBuffer;
 
     float windPhaseOffset = 0.0f;
     float windBase = 0.0f;

@@ -79,82 +79,6 @@ cbuffer CLOTH_SIMULATE_CBUFFER : register(b10)
     float driveForcePhaseGradient;
 };
 
-cbuffer SPHERE_CBUFFER : register(b7)
-{
-    float3 worldPos;
-    float radius;
-    row_major float4x4 sphereWorld;
-    row_major float4x4 sphereInvWorld;
-}
-
-void CollideSphere(inout ClothVertex v)
-{
-    float3 sphereCenterWorld = worldPos;
-    float sphereRadiusWorld = radius;
-    float4 centerLocal4 = mul(float4(sphereCenterWorld, 1.0), invWorld);
-    float3 sphereCenterLocal = centerLocal4.xyz;
-
-    float3 dir = v.position - sphereCenterLocal;
-    float dist = length(dir);
-
-    if (dist < sphereRadiusWorld)
-    {
-        float3 n = normalize(dir);
-        float penetration = sphereRadiusWorld - dist;
-        
-        v.position += n * penetration * 1.0;
-
-        float vn = dot(v.velocity, n);
-        if (vn < 0.0f)
-        {
-            float3 velNormal = vn * n;
-            float3 velTangent = v.velocity - velNormal;
-            v.velocity = velTangent * 0.9 - velNormal * 0.5;
-        }
-    }
-}
-
-struct Plane
-{
-    float3 normal;
-    float d;
-};
-
-cbuffer PLANE_CBUFFER : register(b6)
-{
-    Plane planes[4];
-}
-
-void CollideFloor(inout ClothVertex v, Plane p)
-{
-    Plane worldFloor = p; 
-    
-    float3 localNormal = mul(float4(worldFloor.normal, 0.0f), invWorld).xyz;
-    localNormal = normalize(localNormal);
-
-    float3 worldPoint = worldFloor.normal * worldFloor.d;
-
-    float3 localPoint = mul(float4(worldPoint, 1.0f), invWorld).xyz;
-
-    float dist = dot(localNormal, v.position - localPoint);
-
-    if (dist < 0.0f)
-    {
-        v.position -= localNormal * dist * 0.8f;
-        float vn = dot(v.velocity, localNormal);
-        if (vn < 0.0f)
-        {
-            float3 velNormal = vn * localNormal;
-            float3 velTangent = v.velocity - velNormal;
-            float friction = 0.4f;
-            float restitution = 0.1f;
-
-            v.velocity = velTangent * (1.0f - friction) - velNormal * restitution;
-        }
-    }
-
-}
-
 #define NUM_THREAD_X 16
 
 [numthreads(NUM_THREAD_X, 1, 1)]
@@ -258,11 +182,5 @@ void main(uint3 id : SV_DispatchThreadID)
         outVertex.position = currentPos + smoothedVelocity * deltaTime;
     }
     
-    CollideSphere(outVertex);
-    for (uint j = 0; j < 2; j++)
-    {
-        CollideFloor(outVertex, planes[j]);
-    }
-
     outVertices[id.x] = outVertex;
 }
