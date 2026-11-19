@@ -1696,6 +1696,9 @@ private:
 	bool jumpMotionWarpOverrideActive = false;  // Jump用のMotionWarp上書きが有効か。
 	DirectX::XMFLOAT3 jumpAttackStartPlayerPosition{};  // Jump開始時のプレイヤー位置。
 	DirectX::XMFLOAT3 jumpMotionWarpDirection{ 0.0f, 0.0f, 1.0f };  // Jump用MotionWarpの方向。
+	const AnimationNotifyState* jumpMotionWarpNotifyState = nullptr;
+	float jumpMotionWarpProgress = 0.0f;
+	bool jumpMotionWarpEndPending = false;
 
 	// DashAttack
 	float dashSetupDistanceMin = 8.0f;  // Dashの準備位置に必要な対象との最小距離。

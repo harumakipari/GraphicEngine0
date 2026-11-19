@@ -1286,10 +1286,20 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
             actualWarpDistance = calculatedJumpDistance;
         }
 
+        const auto controller = GetBodyAnimationController();
+        const bool isJumpMotionWarp = jumpMotionWarpOverrideActive && controller &&
+            controller->GetCurrentAnimationName() == "PrimaryAttack_JumpAttack";
         float speed = 0.0f;
         if (duration > 0.0f)
         {
             speed = actualWarpDistance / duration;
+        }
+        if (isJumpMotionWarp)
+        {
+            speed = 0.0f;
+            jumpMotionWarpNotifyState = &state;
+            jumpMotionWarpProgress = 0.0f;
+            jumpMotionWarpEndPending = false;
         }
         AnimationMotionWarp warp{};
         warp.direction = direction;
@@ -1357,6 +1367,11 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
         if (IsFastComboMotionWarpNotify(state))
         {
             ClearFastComboStepIn();
+            break;
+        }
+        if (&state == jumpMotionWarpNotifyState)
+        {
+            jumpMotionWarpEndPending = true;
             break;
         }
         animationMotionWarps.erase(
@@ -1828,6 +1843,9 @@ void GruxEnemy::ClearJumpAttackMotionWarpOverride()
 {
     jumpMotionWarpOverrideActive = false;
     jumpMotionWarpDirection = { 0.0f, 0.0f, 1.0f };
+    jumpMotionWarpNotifyState = nullptr;
+    jumpMotionWarpProgress = 0.0f;
+    jumpMotionWarpEndPending = false;
     animationMotionWarps.clear();
 }
 
@@ -2400,6 +2418,9 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
     DisableAttackHitBoxes();
     animationMotionWarps.clear();
     jumpMotionWarpOverrideActive = false;
+    jumpMotionWarpNotifyState = nullptr;
+    jumpMotionWarpProgress = 0.0f;
+    jumpMotionWarpEndPending = false;
     jumpAttackStartPlayerPosition = {};
     jumpMotionWarpDirection = { 0.0f, 0.0f, 1.0f };
     calculatedJumpDistance = 0.0f;
@@ -3613,9 +3634,13 @@ void GruxEnemy::UpdateWeaponTrails(float deltaTime)
 // AnimationMotionWarp‚ðXV‚·‚é
 void GruxEnemy::UpdateAnimationMotionWarp(float deltaTime)
 {
-    if (!GetBodyAnimationController()->IsPlayAnimation())
+    const auto controller = GetBodyAnimationController();
+    if (!controller || !controller->IsPlayAnimation())
     {
         animationMotionWarps.clear();
+        jumpMotionWarpNotifyState = nullptr;
+        jumpMotionWarpProgress = 0.0f;
+        jumpMotionWarpEndPending = false;
         ClearFastComboStepIn();
     }
 
@@ -3626,6 +3651,41 @@ void GruxEnemy::UpdateAnimationMotionWarp(float deltaTime)
         motionWarpVelocity.y += warp.direction.y * warp.speed;
         motionWarpVelocity.z += warp.direction.z * warp.speed;
     }
+
+    if (jumpMotionWarpNotifyState)
+    {
+        const float duration = jumpMotionWarpNotifyState->endTime - jumpMotionWarpNotifyState->startTime;
+        if (duration > 0.0f && deltaTime > 0.0f)
+        {
+            const float animationTime = controller->GetCurrentAnimationTime();
+            const float currentProgress = jumpMotionWarpEndPending ? 1.0f :
+                std::clamp((animationTime - jumpMotionWarpNotifyState->startTime) / duration, 0.0f, 1.0f);
+            const float progressDelta = (std::max)(0.0f, currentProgress - jumpMotionWarpProgress);
+            const float distanceDelta = calculatedJumpDistance * progressDelta;
+            const float speed = distanceDelta / deltaTime;
+            motionWarpVelocity.x += jumpMotionWarpDirection.x * speed;
+            motionWarpVelocity.y += jumpMotionWarpDirection.y * speed;
+            motionWarpVelocity.z += jumpMotionWarpDirection.z * speed;
+            jumpMotionWarpProgress = currentProgress;
+        }
+
+        if (jumpMotionWarpEndPending)
+        {
+            animationMotionWarps.erase(
+                std::remove_if(
+                    animationMotionWarps.begin(),
+                    animationMotionWarps.end(),
+                    [&](const AnimationMotionWarp& warp)
+                    {
+                        return warp.state == jumpMotionWarpNotifyState;
+                    }),
+                animationMotionWarps.end());
+            jumpMotionWarpNotifyState = nullptr;
+            jumpMotionWarpProgress = 0.0f;
+            jumpMotionWarpEndPending = false;
+        }
+    }
+
     characterMovementComponent->SetFrameAdditionalVelocity(motionWarpVelocity);
     characterMovementComponent->TickDeferredMovement(deltaTime);
 }
