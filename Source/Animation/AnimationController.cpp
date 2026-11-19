@@ -1042,68 +1042,10 @@ void AnimationController::UpdateBlendSpace(const float deltaTime)
     // デバッグ固定方向はPose評価だけに使用し、Playerの移動入力は変更しない。
     DirectX::XMFLOAT2 evaluationInput = blendInput;
 
-    const float locomotionDebugEvaluationAngle = DirectX::XMConvertToDegrees(atan2f(evaluationInput.x, evaluationInput.y));
-
-    constexpr float locomotionBackwardSideMaxWeight = 0.15f;
-    constexpr float locomotionDebugBwdWeight = 0.5f;
-
     // 旧Forward/Backwardグループは保持するが、Locomotion更新では使用しない。
     std::vector<BlendSpace::BlendResult> weights =
         locomotionBlendSpace.CalculateWeights(evaluationInput);
 
-    // 90度ではSide 100%、180度ではBackward 100%を維持する。
-    // 90度直後の短い遷移帯で連続的にSide上限へ収束させる。
-    const float absoluteEvaluationAngle = std::fabs(locomotionDebugEvaluationAngle);
-    if (absoluteEvaluationAngle >= 90.0f && absoluteEvaluationAngle <= 180.0f && weights.size() == 2)
-    {
-        const auto backwardIt = animationNameToIndex.find("Jog_Bwd");
-        if (backwardIt != animationNameToIndex.end())
-        {
-            size_t backwardWeightIndex = weights.size();
-            for (size_t i = 0; i < weights.size(); ++i)
-            {
-                if (weights[i].clip == backwardIt->second)
-                {
-                    backwardWeightIndex = i;
-                    break;
-                }
-            }
-
-            if (backwardWeightIndex < weights.size())
-            {
-                const size_t sideWeightIndex = 1 - backwardWeightIndex;
-                const float sideMaxWeight = std::clamp(locomotionBackwardSideMaxWeight, 0.0f, 0.5f);
-                const float originalSideWeight = weights[sideWeightIndex].weight;
-                const float cappedSideWeight = originalSideWeight < sideMaxWeight ? originalSideWeight : sideMaxWeight;
-
-                constexpr float TransitionAngle = 22.5f;
-                float transition = std::clamp((absoluteEvaluationAngle - 90.0f) / TransitionAngle, 0.0f, 1.0f);
-                transition = transition * transition * (3.0f - 2.0f * transition);
-
-                const float adjustedSideWeight = std::lerp(originalSideWeight, cappedSideWeight, transition);
-                weights[sideWeightIndex].weight = adjustedSideWeight;
-                weights[backwardWeightIndex].weight = 1.0f - adjustedSideWeight;
-            }
-        }
-    }
-
-    if (weights.size() == 2)
-    {
-        const auto bwdIt = animationNameToIndex.find("Jog_Bwd");
-        if (bwdIt != animationNameToIndex.end())
-        {
-            for (size_t i = 0; i < weights.size(); ++i)
-            {
-                if (weights[i].clip == bwdIt->second)
-                {
-                    const float bwdWeight = std::clamp(locomotionDebugBwdWeight, 0.0f, 1.0f);
-                    weights[i].weight = bwdWeight;
-                    weights[1 - i].weight = 1.0f - bwdWeight;
-                    break;
-                }
-            }
-        }
-    }
     if (weights.empty())
     {
         blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };

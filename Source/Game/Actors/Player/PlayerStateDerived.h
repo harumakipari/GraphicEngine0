@@ -167,8 +167,15 @@ private:
     bool IsFinalRushAttack() const;
     void ResetRushInputGrace();
 
+    // Rush接近・予備動作の調整値
     float windupElapsedTime = 0.0f;
     float rushStopDistance = 0.0f;
+    float moveToEnemyInterval = 0.2f;  // Rush接近時に敵へ移動する所要時間（秒）。
+    const float rushApproachPoseTime = 0.766f;
+    float rushApproachPoseBlendTime = 0.12f; // Rush接近姿勢へ切り替えるブレンド時間（秒）。
+    float normalEnemyRushSurfaceMargin = 0.15f; // 通常敵へのRush停止位置で、敵表面から追加する余白（ワールド単位）。
+    float rushWindupDuration = 0.20f;   // Rush予備動作時間
+
     int queuedAttackCount = 0;// ラッシュの時のコンボカウント
     int comboIndex = 0; 
     bool rushTransitionWindowObserved = false;

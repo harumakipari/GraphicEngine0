@@ -238,14 +238,6 @@ public:
     static void SetInputEnabled(const bool enabled)
     {
         inputEnabled = enabled;
-        if (inputEnabled)
-        {
-            Logger::Log(U8("“ü—Í‚ð—LŒø‰»‚µ‚½"));
-        }
-        else
-        {
-            Logger::Log(U8("“ü—Í‚ð–³Œø‰»‚µ‚½"));
-        }
     }
 
     // “ü—Í‰Â”\‚©‚Ç‚¤‚©

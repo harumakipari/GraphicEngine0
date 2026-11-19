@@ -388,7 +388,7 @@ void PlayerDeathPendingState::Enter()
     // ボスとプレイヤーの構図のために回転させる
     if (auto gruxEnemy = player->GetOwnerScene()->GetActorManager()->GetActorOfType<GruxEnemy>())
     {
-        DirectX::XMFLOAT3 deathDirection = MathHelper::Subtract(gruxEnemy->GetPosition(), player->GetPosition());deathDirection.y = 0.0f;
+        DirectX::XMFLOAT3 deathDirection = MathHelper::Subtract(gruxEnemy->GetPosition(), player->GetPosition()); deathDirection.y = 0.0f;
         if (MathHelper::Length(deathDirection) > FLT_EPSILON)
         {
             deathDirection = MathHelper::Normalize(deathDirection);
@@ -451,7 +451,6 @@ void PlayerWinState::Exit()
 // ラッシュ
 void PlayerRushState::Enter()
 {
-
     rushHpDisplayTarget.reset();
     player->SetRushWeaponVisual(true);
     player->ForceResetPlayerSlow();
@@ -467,13 +466,8 @@ void PlayerRushState::Enter()
         "Rush_Attack_Fast_B",
         "Rush_Attack_Fast_End",
     };
-    const int rushAttackCount = std::clamp(
-        player->GetMaxRushAttackCount(), 1,
-        static_cast<int>(availableRushCombo.size()));
-    rushCombo.assign(
-        availableRushCombo.begin(),
-        availableRushCombo.begin() + rushAttackCount);
-    // A tuned shorter Rush still finishes with the existing finisher animation.
+    const int rushAttackCount = std::clamp(player->GetMaxRushAttackCount(), 1, static_cast<int>(availableRushCombo.size()));
+    rushCombo.assign(availableRushCombo.begin(), availableRushCombo.begin() + rushAttackCount);
     rushCombo.back() = "Rush_Attack_Fast_End";
 
     comboIndex = 0;
@@ -496,33 +490,22 @@ void PlayerRushState::Enter()
         }
 
         constexpr float gruxRushStopDistance = 2.5f;
-        constexpr float minimumNormalEnemyRushStopDistance = 0.25f;
         float rushStopDistance = gruxRushStopDistance;
-        float playerRadius = 0.0f;
-        float targetRadius = 0.0f;
 
-        // MoveToActor compares Actor positions in XZ, while both character
-        // capsules are only offset vertically. The horizontal center distance
-        // can therefore use their radii directly for normal enemies.
         if (!gruxTarget)
         {
-            const auto playerCapsule = std::dynamic_pointer_cast<CapsuleComponent>(
-                player->FindComponentByName("capsuleComponent"));
-            const auto targetCapsule = std::dynamic_pointer_cast<CapsuleComponent>(
-                target->FindComponentByName("capsuleComponent"));
+            const auto playerCapsule = std::dynamic_pointer_cast<CapsuleComponent>(player->FindComponentByName("capsuleComponent"));
+            const auto targetCapsule = std::dynamic_pointer_cast<CapsuleComponent>(target->FindComponentByName("capsuleComponent"));
             if (playerCapsule && targetCapsule)
             {
+                float targetRadius = 0.0f;
+                float playerRadius = 0.0f;
                 playerRadius = playerCapsule->GetRadius();
                 targetRadius = targetCapsule->GetRadius();
-                if (std::isfinite(playerRadius) && std::isfinite(targetRadius) &&
-                    playerRadius > 0.0f && targetRadius > 0.0f)
+                if (playerRadius > 0.0f && targetRadius > 0.0f)
                 {
-                    float surfaceMargin = player->normalEnemyRushSurfaceMargin;
-                    if (!std::isfinite(surfaceMargin))
-                        surfaceMargin = 0.0f;
-                    surfaceMargin = std::clamp(surfaceMargin, 0.0f, 1.0f);
-                    rushStopDistance = (std::max)(minimumNormalEnemyRushStopDistance,
-                        playerRadius + targetRadius + surfaceMargin);
+                    constexpr float minimumNormalEnemyRushStopDistance = 0.25f;
+                    rushStopDistance = (std::max)(minimumNormalEnemyRushStopDistance, playerRadius + targetRadius + normalEnemyRushSurfaceMargin);
                 }
             }
         }
@@ -532,15 +515,13 @@ void PlayerRushState::Enter()
         // ルートモーションを無視する
         if (const auto controller = player->GetBodyAnimationController())
         {
-            constexpr float rushApproachPoseTime = 0.766f;
-            controller->BlendToHeldAnimationPose(
-                "Jog_Fwd", rushApproachPoseTime, player->rushApproachPoseBlendTime);
+
+            controller->BlendToHeldAnimationPose("Jog_Fwd", rushApproachPoseTime, rushApproachPoseBlendTime);
         }
 
-        // A zero-duration Windup preserves the previous immediate dash behavior.
-        if (player->GetRushWindupDuration() <= FLT_EPSILON)
+        if (rushWindupDuration <= FLT_EPSILON)
         {
-            player->characterMovementComponent->MoveToActor(target, player->moveToEnemyInterval, this->rushStopDistance);
+            player->characterMovementComponent->MoveToActor(target, moveToEnemyInterval, this->rushStopDistance);
         }
         else
         {
@@ -569,7 +550,7 @@ void PlayerRushState::Execute(float deltaTime)
     {
         const auto targetStateMachine = target->GetStateMachine();
         if (target->IsDefeated() ||
-            (targetStateMachine && std::string(targetStateMachine->GetStateName()) == "EnemyDeathState")&&(!player->IsFinalHitAttackDrainActive()))
+            (targetStateMachine && std::string(targetStateMachine->GetStateName()) == "EnemyDeathState") && (!player->IsFinalHitAttackDrainActive()))
         {
             player->BeginBossSlowReturn(true);
             player->GetStateMachine()->ChangeState("Idle");
@@ -584,20 +565,17 @@ void PlayerRushState::Execute(float deltaTime)
         player->rotationComponent->SetDirection(targetDirection);
     }
 
-
-
-
     switch (phase)
     {
     case RushPhase::Windup:
     {
         windupElapsedTime += (std::max)(deltaTime, 0.0f);
-        if (windupElapsedTime >= player->GetRushWindupDuration())
+        if (windupElapsedTime >= rushWindupDuration)
         {
             if (const auto target = player->rushTarget.lock())
             {
                 player->characterMovementComponent->MoveToActor(
-                    target, player->moveToEnemyInterval, rushStopDistance);
+                    target, moveToEnemyInterval, rushStopDistance);
                 phase = RushPhase::DashToTarget;
                 player->SetRushWindupActive(false);
             }
@@ -736,14 +714,14 @@ void PlayerRushState::Exit()
 void PlayerRushState::AdvanceRushCombo()
 {
     if (queuedAttackCount <= 0 || IsFinalRushAttack())
-        return ;
+        return;
 
     queuedAttackCount--;
     comboIndex++;
     if (comboIndex >= static_cast<int>(rushCombo.size()))
     {
         phase = RushPhase::Finished;
-        return ;
+        return;
     }
 
     currentAttackAnimation = rushCombo[comboIndex];

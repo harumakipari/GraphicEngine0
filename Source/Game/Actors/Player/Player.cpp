@@ -241,6 +241,7 @@ void Player::InitializeSkeletalMeshAndAnimations(const std::string& parentName)
 
     controller->AddLocomotionBlendAnimation("Jog_Fwd", 0.0f, 0.0f);
     controller->AddLocomotionBlendAnimation("Jog_Right", 90.0f, 0.464f);
+    controller->AddLocomotionBlendAnimation("Jog_Bwd", 180.0f, 0.0f);
     controller->AddLocomotionBlendAnimation("Jog_Left", -90.0f, 0.5f);
 
     std::string name = GetName();
@@ -641,14 +642,6 @@ void Player::DrawImGuiDetails()
             {
                 justDodgeMaxTowardAttackerDot = std::cos(DirectX::XMConvertToRadians(angleDegrees));
             }
-            ImGui::TreePop();
-        }
-        if (ImGui::TreeNode(U8("ラッシュ攻撃")))
-        {
-            ImGui::DragFloat(U8("通常敵Rush停止余白（m）"), &normalEnemyRushSurfaceMargin, 0.01f, 0.0f, 1.0f, "%.3f m");
-            ImGui::DragFloat(U8("ラッシュ後の敵までへのダッシュにかかる時間"), &moveToEnemyInterval, 0.05f);
-            ImGui::DragFloat(U8("Rush接近ポーズBlend時間（秒）"), &rushApproachPoseBlendTime, 0.005f, 0.0f, 0.5f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-            ImGui::DragFloat(U8("Rush予備動作時間（秒）"), &rushWindupDuration, 0.005f, 0.0f, 0.5f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
             ImGui::TreePop();
         }
         if (ImGui::TreeNode(U8("ヒットストップ")))
