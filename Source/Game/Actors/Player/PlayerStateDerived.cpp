@@ -68,7 +68,7 @@ void PlayerAttackState::Enter()
     const bool isComboContinuation = continuingComboTransition;
     if (!isComboContinuation)
     {
-        player->currentAttackAnimation = player->startAttackAnimation;
+        player->currentAttackAnimation = startAttackAnimation;
         player->comboQueued = false;
     }
 
@@ -158,7 +158,7 @@ void PlayerAttackState::Execute(float deltaTime)
         const float inputMagnitude = MathHelper::Length(player->inputComponent->GetMoveInput());
         const char* targetState = inputMagnitude > 0.01f ? "Running" : "Idle";
 
-        player->currentAttackAnimation = player->startAttackAnimation;
+        player->currentAttackAnimation = startAttackAnimation;
         player->comboQueued = false;
 
         player->GetStateMachine()->ChangeState(targetState);
@@ -179,7 +179,7 @@ void PlayerAttackState::Exit()
         {
             player->MarkFinalHitAttackDrainInterrupted();
         }
-        player->currentAttackAnimation = player->startAttackAnimation;
+        player->currentAttackAnimation = startAttackAnimation;
         player->comboQueued = false;
         dodgeQueued = false;
     }
@@ -228,9 +228,9 @@ void PlayerDodgeState::Execute(float deltaTime)
     if (player->justDodgeSuccess && !justDodgeSuccessHandled)
     {// ジャスト回避成功したら、
         justDodgeSuccessHandled = true;
-        player->SetRushInputAcceptance(!player->rushTarget.expired());
+        player->SetRushInputAcceptance(static_cast<bool>(player->GetRushTarget()));
     }
-    if (player->rushTarget.expired())
+    if (!player->GetRushTarget())
     {
         player->SetRushInputAcceptance(false);
         rushRequested = false;
@@ -441,7 +441,7 @@ void PlayerWinState::Enter()
 
 void PlayerWinState::Execute(float deltaTime)
 {
-    (void)deltaTime;
+
 }
 
 void PlayerWinState::Exit()
@@ -476,10 +476,8 @@ void PlayerRushState::Enter()
 
     phase = RushPhase::DashToTarget;
     windupElapsedTime = 0.0f;
-    player->SetRushWindupActive(false);
-    player->SetRushAttackActive(false);
 
-    if (auto target = player->rushTarget.lock())
+    if (auto target = player->GetRushTarget())
     {// 移動する
         const auto gruxTarget = std::dynamic_pointer_cast<GruxEnemy>(target);
         if (gruxTarget)
@@ -510,7 +508,6 @@ void PlayerRushState::Enter()
             }
         }
 
-
         this->rushStopDistance = rushStopDistance;
         // ルートモーションを無視する
         if (const auto controller = player->GetBodyAnimationController())
@@ -526,10 +523,8 @@ void PlayerRushState::Enter()
         else
         {
             phase = RushPhase::Windup;
-            player->SetRushWindupActive(true);
         }
     }
-
 
     queuedAttackCount = 0;
     ResetRushInputGrace();
@@ -540,13 +535,13 @@ void PlayerRushState::Enter()
 
 void PlayerRushState::Execute(float deltaTime)
 {
-    if (player->rushTarget.expired())
+    if (!player->GetRushTarget())
     {
         player->ForceResetBossSlow();
         player->GetStateMachine()->ChangeState("Idle");
         return;
     }
-    if (auto target = player->rushTarget.lock())
+    if (auto target = player->GetRushTarget())
     {
         const auto targetStateMachine = target->GetStateMachine();
         if (target->IsDefeated() ||
@@ -557,10 +552,9 @@ void PlayerRushState::Execute(float deltaTime)
             return;
         }
     }
-    if (auto target = player->rushTarget.lock())
+    if (auto target = player->GetRushTarget())
     {
-        DirectX::XMFLOAT3 targetDirection = MathHelper::Subtract(
-            target->GetPosition(), player->GetPosition());
+        DirectX::XMFLOAT3 targetDirection = MathHelper::Subtract(target->GetPosition(), player->GetPosition());
         targetDirection.y = 0.0f;
         player->rotationComponent->SetDirection(targetDirection);
     }
@@ -572,12 +566,10 @@ void PlayerRushState::Execute(float deltaTime)
         windupElapsedTime += (std::max)(deltaTime, 0.0f);
         if (windupElapsedTime >= rushWindupDuration)
         {
-            if (const auto target = player->rushTarget.lock())
+            if (const auto target = player->GetRushTarget())
             {
-                player->characterMovementComponent->MoveToActor(
-                    target, moveToEnemyInterval, rushStopDistance);
+                player->characterMovementComponent->MoveToActor(target, moveToEnemyInterval, rushStopDistance);
                 phase = RushPhase::DashToTarget;
-                player->SetRushWindupActive(false);
             }
         }
         break;
@@ -590,7 +582,6 @@ void PlayerRushState::Execute(float deltaTime)
                 controller->ReleaseRuntimeHeldAnimationPose(true);
             player->PlayBodyAnimation(currentAttackAnimation, false, true, 0.10f);
             phase = RushPhase::Attack;
-            player->SetRushAttackActive(true);
         }
         break;
     case RushPhase::Attack:
@@ -675,8 +666,6 @@ void PlayerRushState::Exit()
     if (auto* scene = dynamic_cast<SceneBase*>(player->GetOwnerScene()))
         scene->StopJustDodgeRadialBlur();
 
-    player->SetRushWindupActive(false);
-    player->SetRushAttackActive(false);
     if (const auto controller = player->GetBodyAnimationController())
         controller->ReleaseRuntimeHeldAnimationPose();
     if (player->IsFinalHitAttackDrainActive() &&

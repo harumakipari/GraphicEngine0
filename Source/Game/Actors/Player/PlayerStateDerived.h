@@ -64,6 +64,7 @@ public:
 private:
     bool dodgeQueued = false;
     bool continuingComboTransition = false;
+    std::string startAttackAnimation = "Primary_Attack_Fast_A";
 };
 
 // 回避ステートオブジェクト

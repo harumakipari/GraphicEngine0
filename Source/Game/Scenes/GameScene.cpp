@@ -725,8 +725,8 @@ GameScene::LockOnTargetSelectionResult GameScene::UpdateLockOnTargetSelection()
             lockOnRequiresReleaseAfterBossRoomEntry = false;
         else
             return darkCameraActor->HasValidLockOnTarget()
-                ? LockOnTargetSelectionResult::Selected
-                : LockOnTargetSelectionResult::NoCandidate;
+            ? LockOnTargetSelectionResult::Selected
+            : LockOnTargetSelectionResult::NoCandidate;
     }
 
     const bool hasValidLockOnTarget = darkCameraActor->HasValidLockOnTarget();
@@ -1004,8 +1004,7 @@ void GameScene::UpdateOperationGuideTutorial(const LockOnTargetSelectionResult s
         tutorialController.RecordJustDodge(true);
     }
 
-    const bool xVisible = tutorialController.IsDodgeGuideActivated() &&
-        player->IsOperationGuideItemVisible(Player::OperationGuideItem::X);
+    const bool xVisible = tutorialController.IsDodgeGuideActivated() && player->IsOperationGuideItemVisible(Player::OperationGuideItem::X);
     const bool xLearned = xVisible && player->IsOperationGuideItemLearned(Player::OperationGuideItem::X);
     const bool dodging = xVisible && !xLearned && player->IsDodging();
     if (tutorialController.ShouldLearnX(xVisible, xLearned, dodging))

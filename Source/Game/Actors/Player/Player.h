@@ -227,12 +227,8 @@ public:
     // フェーズ遷移イベント中に停止した戦闘操作を再開する。
     void ResumeBattleActionsAfterEvent();
     bool IsRushActiveForPhaseTransition() const { return stateMachine && std::string(stateMachine->GetStateName()) == "Rush"; }
-    bool IsRushActive() const { return IsRushActiveForPhaseTransition(); }
-    bool IsRushWindupActive() const { return rushWindupActive; }
-    bool IsRushAttackActive() const { return rushAttackActive; }
-    void SetRushWindupActive(bool active) { rushWindupActive = active; }
-    void SetRushAttackActive(bool active) { rushAttackActive = active; }
     bool IsJustDodgePresentationActive() const { return stateMachine && std::string(stateMachine->GetStateName()) == "Dodge" && justDodgeSuccess; }
+
     std::shared_ptr<Enemy> GetRushTarget() const { return rushTarget.lock(); }
 
     void RequestFinalHitRushFollowUpStop()
@@ -259,16 +255,13 @@ public:
         return stateName != "Attack" && stateName != "Rush";
     }
     bool IsFinalHitRushFollowUpStopRequested() const { return finalHitRushFollowUpStopRequested; }
-    void ClearFinalHitRushFollowUpStop()
-    {
-        finalHitRushFollowUpStopRequested = false;
-    }
+    void ClearFinalHitRushFollowUpStop() { finalHitRushFollowUpStopRequested = false; }
     bool IsFinalHitAttackDrainComplete() const;
     bool IsFinalHitAttackDrainActive() const { return finalHitAttackDrainActive; }
     bool IsFinalHitAttackDrainLatched() const { return finalHitAttackDrainCompleted; }
+
     // 最終ヒット用の攻撃完走待機を中断し、姿勢固定要求を解除する。
     void MarkFinalHitAttackDrainInterrupted();
-
     // HP、Transform、現在Stateを維持して一時的な戦闘状態を解除する。
     void ClearTransientBattleActions();
     // シネマティックでTransformを変更する前にゲームプレイ操作を終了する。
@@ -403,19 +396,12 @@ private:
 public:
     // 攻撃アニメーションとコンボ・Notify関連の状態
     std::string currentAttackAnimation = "Primary_Attack_Fast_A";
-    std::string startAttackAnimation = "Primary_Attack_Fast_A";
 
     bool comboQueued = false;
     bool inputWindow = false;
     bool transitionWindow = false;
     bool justDodgeSuccess = false;
-
     bool invincible = false;
-
-
-
-    // Rush対象と初回入力の受付状態
-    std::weak_ptr<Enemy> rushTarget; // Just Dodge時に保持するRush対象。
 
     // 入力受付のコマンド
     ActionRequest bufferCommand{}; // 入力コマンド
@@ -452,6 +438,9 @@ private:
     // 操作UI
     float operationGuidePulseAmplitude = 0.185f;
     float operationGuidePulseSpeed = 3.5f; // 操作ガイドの拡縮アニメーション角速度（rad/s）。
+
+    // Rush対象と初回入力の受付状態
+    std::weak_ptr<Enemy> rushTarget; // Just Dodge時に保持するRush対象。
 
     // Rushガイドの表示状態とフェード設定
     float rushPromptAlpha = 0.0f;
@@ -721,3 +710,4 @@ private:
     friend class PlayerDeathPendingState;
     friend class PlayerWinState;
 };
+

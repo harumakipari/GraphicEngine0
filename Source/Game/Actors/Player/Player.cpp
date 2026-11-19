@@ -1727,8 +1727,7 @@ void Player::CancelGameplayActionsForCinematic()
     characterMovementComponent->AddForcedMove({ 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
     characterMovementComponent->ResetFixedSpeed();
     velocity = { 0.0f, 0.0f, 0.0f };
-
-    currentAttackAnimation = startAttackAnimation;
+    currentAttackAnimation = "Primary_Attack_Fast_A";
     rushTarget.reset();
     locomotionMode = LocomotionMode::Idle;
     HideAndResetLockOnGuideUI();
@@ -3127,9 +3126,7 @@ void Player::UpdateLockOnGuideUI()
         HideAndResetLockOnGuideUI();
         return;
     }
-    if (!lockOnGuideArrowImageComponent || !lockOnGuideButtonImageComponent ||
-        !IsBossBattle() || GetHp() <= 0 || IsInWinState() ||
-        IsRushActive() || IsJustDodgePresentationActive())
+    if (!lockOnGuideArrowImageComponent || !lockOnGuideButtonImageComponent || !IsBossBattle() || GetHp() <= 0 || IsInWinState() || IsRushActiveForPhaseTransition() || IsJustDodgePresentationActive())
     {
         HideAndResetLockOnGuideUI();
         return;
