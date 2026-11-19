@@ -1192,15 +1192,6 @@ void GruxEnemy::SpawnRushHitRing(const DirectX::XMFLOAT3 hitPos,
             { 0.0f, 0.0f, 0.0f });
     }
 
-    if (!rushHitRingEffectComponent)
-        return;
-
-    rushHitRingEffectComponent->SetWorldLocationDirect(rushEffectPosition);
-    rushHitRingEffectComponent->UpdateComponentToWorld();
-    EffectManager::EmitParticle(
-        rushHitRingEffectComponent->GetEffectHandle(),
-        rushHitRingEffectComponent->GetComponentLocation(),
-        rushHitRingEffectComponent->GetComponentEulerRotation());
 }
 
 void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
@@ -3524,8 +3515,6 @@ void GruxEnemy::CreateEffectComponents(const std::string& parentName)
     hitSwordEffectComponent = this->AddComponent<class ParticleComponent>("hitSwordEffectComponent", parentName);
     hitSwordEffectComponent->Load("./Data/Effect/Files/NormalAttackHitEffect.json");
 
-    rushHitRingEffectComponent = this->AddComponent<class ParticleComponent>("rushHitRingEffectComponent", parentName);
-    rushHitRingEffectComponent->Load("./Data/Effect/Files/RushHitRingEffect.json");
     // Rush被弾時のエフェクト
     rushHitSparkEffectComponent = this->AddComponent<class ParticleComponent>("rushHitSparkEffectComponent", parentName);
     rushHitSparkEffectComponent->Load("./Data/Effect/Files/RushCoreEffect.json");

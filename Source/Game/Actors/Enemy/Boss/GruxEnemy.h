@@ -1362,8 +1362,7 @@ private:
 
 	// 演出・予兆リソース
 	std::vector<std::shared_ptr<CoreStandaloneAudioSource>> bossDeathCinematicOneShots;  // 死亡演出で再生したワンショット音声。
-	std::shared_ptr<ParticleComponent> hitSwordEffectComponent; // Existing normal hit effect
-	std::shared_ptr<ParticleComponent> rushHitRingEffectComponent; // Rush World Ring effect
+	std::shared_ptr<ParticleComponent> hitSwordEffectComponent;
 	std::shared_ptr<ParticleComponent> rushHitSparkEffectComponent; // Rush Spark effect
 	float rushHitEffectSurfaceOffset = 0.08f;  // Rush命中エフェクトを表面から離す距離。
 	std::shared_ptr<ParticleComponent> groundDustEffectComponent;  // 地面の砂煙エフェクト。

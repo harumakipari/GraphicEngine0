@@ -1552,7 +1552,7 @@ void InterleavedGltfModel::CreateAndUploadResources(ID3D11Device* device)
 		};
 		hr = CreateVsFromCSO(device, "./Data/Shaders/GltfModelVS.cso", vertexShader.ReleaseAndGetAddressOf(), inputLayout.ReleaseAndGetAddressOf(), inputElementDesc, _countof(inputElementDesc));
 		_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-		hr = CreateVsFromCSO(device, "./Data/Shaders/ElasticBuildingCsmVS.cso", vertexShaderCSM.ReleaseAndGetAddressOf(), NULL, NULL, 0);
+		hr = CreateVsFromCSO(device, "./Data/Shaders/GltfModelCsmVS.cso", vertexShaderCSM.ReleaseAndGetAddressOf(), NULL, NULL, 0);
 		_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
 	}
